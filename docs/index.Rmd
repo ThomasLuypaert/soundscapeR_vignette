@@ -1,0 +1,1618 @@
+---
+title: "soundscapeR R-package"
+output: 
+  rmdformats::readthedown:
+    self_contained: FALSE
+    includes:
+      after_body: footer.html
+css: theme.css
+author: Thomas Luypaert
+---
+
+```{r, out.width= "100%", echo=FALSE}
+
+knitr::include_graphics("images/soundscapeR_banner.png")
+
+```
+
+# Welcome!
+
+```{r, out.width= "40%", out.extra='style="float:right; padding:20px"', echo=FALSE}
+
+knitr::include_graphics("images/soundscaper_hexsticker.png")
+
+```
+
+Hi there!
+
+Welcome to the case study vignette of the `soundscapeR` R-package. Here, we demonstrate the use of the functions contained in the package using data from a real-world ecological system. The goal of `soundscapeR` is to provide a standardized analytical pipeline for the computation, exploration, visualization, diversity quantification and comparison of soundscapes using Hill numbers. The package is designed to work with either continuous or regular-interval long-duration acoustic recordings, and can quantify the diversity of soundscapes using a range of different diversity types (richness, evenness & diversity), spatial scales (alpha, beta and gamma diversities), and spectro-temporal subsets.\
+\
+If you are unfamiliar with the `soundscapeR` workflow, head on over to [Luypaert et al. (2022)](https://besjournals.onlinelibrary.wiley.com/doi/full/10.1111/2041-210X.13924) and take a look at the theoretical concepts. Moreover, additional background information can be found on the [GitHub landing page](https://github.com/ThomasLuypaert/soundscapeR) for this R-package.\
+\
+Without further ado, let's get started!\
+
+------------------------------------------------------------------------
+
+# Case study data
+
+### The study system
+
+For the case study presented here, we will be comparing the soundscapes of two islands of differing size in the Balbina Hydroelectric Reservoir (BHR; Fig. 1) in the Brazilian Amazon. The BHR is one of the largest hydroelectric reservoirs on Earth and was formed when a tributary of the Amazon, the Uatumã River, was dammed in 1987, turning the former hilltops of primary continuous forest into \> 3,500 islands spanning an area of approximately 300,000 ha ([Bueno and Peres 2019](https://onlinelibrary.wiley.com/doi/full/10.1111/ecog.04568)). The artificial tropical rainforest archipelago now contains islands spanning a wide range of sizes, ranging from 0.2 to 4,878 ha.
+
+\
+\
+
+```{r balbina, echo=FALSE, fig.cap="Figure 1: An aerial photograph of the Balbina Hydroelectric Reservoir, showcasing a highly fragmented landscape consisting of many islands of different sizes. Picture credit belongs to Luke Gibson.", out.width = '100%'}
+knitr::include_graphics("images/Balbina_hydroelectric_reservoir.jpg")
+```
+
+Long-duration acoustic data was collected at 151 plots on 72 islands (size range: 0.45-1699 ha) and 4 continuous forest sites at the BHR between July and December 2015. The number of plots per island was proportional to the habitat area associated with each island, and varied between 4-10 for continuous forest sites and 1-7 for islands. At each plot, a passive acoustic sensor (an LG smartphone enclosed in a waterproof case linked to an external omnidirectional microphone) was attached to a tree trunk at 1.5m height and set to record the soundscape for 1 minute every 5 minutes for 4-10 days at a sampling rate of 44,100 Hz using the [ARBIMON Touch application](https://arbimon.rfcx.org/).
+
+### Why the BHR?
+
+Previous work has shown that the soundscape diversity metrics that can be computed using the `soundscapeR` R-package are a good proxy for the taxonomic diversity at the Balbina Hydroelectric Reservoir ([Luypaert et al. 2022](https://besjournals.onlinelibrary.wiley.com/doi/full/10.1111/2041-210X.13924)). Moreover, more recently, we showed that the soundscape richness is sensitive to one of the most fundamental patterns in ecology, the positive scaling of richness with island size, which we termed the soundscape-area relationship (SSAR - see [Luypaert et al. 2023](https://doi.org/10.1101/2023.02.08.527658 )).\
+\
+Clearly, the BHR is an informative system to explore how soundscapes can be used to uncover ecology's secrets. As such, in this case study, we investigate the soundscapes of two islands of differing size to demonstrate the steps in the `soundscapeR` workflow.\
+
+### The selected islands
+
+For this case study, we will be looking at the soundscapes of two islands at the BHR: ***Aline island*** (2.08 ha) and ***Mascote island*** (668.03 ha). Since the number of plots at which we collected soundscape data is proportional to the island size, we will use acoustic data for 1 plot at Aline island and 4 plots at Mascote island (Fig. 2). At each of these plots, sound was recorded for 1 minute every 5 minutes for 5 days (1440 1-min sound files per plot).
+
+\
+\
+
+```{r islands, echo=FALSE, fig.cap="Figure 2: A schematic representation of the islands used in this case study.", out.width = '100%'}
+knitr::include_graphics("images/case_study_islands.PNG")
+```
+
+The raw sound files for these 5 plots on 2 island can be downloaded from the online repository [here](link%20to%20repository).
+
+------------------------------------------------------------------------
+
+# The workflow
+
+## Before we start
+
+Before starting the practical part of the case study, first, we will download and install the `soundscapeR` R-package from GitHub and load it into R. \
+\
+**If you haven't already installed the package, uncomment the first command below and run the code chunk:**
+
+```{r}
+
+# devtools::install_github(repo = "ThomasLuypaert/soundscapeR")
+
+library(soundscapeR)
+
+```
+
+------------------------------------------------------------------------
+
+## Workflow overview
+
+**The Hill-based diversity quantification of soundscapes presented in [Luypaert et al. (2022)](https://besjournals.onlinelibrary.wiley.com/doi/full/10.1111/2041-210X.13924) consists of three key steps:**  \
+\
+
+-    **Step 1:** Grouping sounds into Operational Sound Units (OSUs) and evaluating OSU presence in each sample of the 24h acoustic trait space\
+    \
+
+-   **Step 2:** Assessing the prevalence (or incidence) of OSUs across the recording period\
+    \
+    
+-   **Step 3:** Quantifying the soundscape diversity using the framework of Hill numbers\
+    \
+
+
+To simplify the use of the `soundscapeR` package, we created an S4-object which we term a ***‘soundscape’*** object. This data object has a formally defined structure consisting of slots, containing all relevant metadata and data objects that are generated during the workflow (step 1 and 2). The soundscape object forms the basis on which all functions downstream in the workflow are applied (step 3). Using this object-oriented programming approach ensures that metadata only needs to be entered once and is remembered downstream. Moreover, all chosen parameters in the workflow are stored by the soundscape object and can be accessed easily. Finally, the slots containing the various metadata and data objects have strict expectations of what each data input looks like, thus minimizing the chance of accidental errors.\
+    \
+    
+**Take a look at Figure 3 for an overview of the `soundscapeR` workflow:**
+
+```{r figure 3, echo=FALSE, fig.cap="Figure 3: A schematic overview of the `soundscapeR` workflow", out.width = '100%'}
+knitr::include_graphics("images/Plot_1_soundscapeR_workflow.PNG")
+```
+
+
+
+
+**As you can see, there are three phases to the `soundscapeR` workflow:**
+
+-    **Phase 1:** Prepare a soundscape object using the `ss_index_calc` function for index calculation and the `ss_create` function for calculating OSU presence and incidence across the recording period\
+    \
+
+-   **Phase 2:** Explore the diversity of a single soundscape using the `ss_heatmap`, `ss_diversity`, `ss_evenness`, and `ss_diversity_plot` functions\
+    \
+    
+-   **Step 3:** Compare the diversity of multiple soundscapes using the `ss_compare`, `ss_pcoa`, `ss_divpart`, and `ss_pairdis` functions\
+    \
+
+
+Below, we will go over each of these phases and show you how to use each function using the case study data outlined above.
+
+------------------------------------------------------------------------
+
+## Phase I: Preparing soundscapes
+
+### 1.1. The `ss_index_calc` function
+
+##### A. In theory
+\
+
+To quantify the presence of OSUs in each day of the recording period, first, we will make use the **Acoustic Cover (CVR)** spectral acoustic index (also known as *ACTsp* in the [Towsey 2017](https://eprints.qut.edu.au/110634/1/QUTePrints110634_TechReport_Towsey2017August_AcousticIndices%20v3.pdf) technical report) to capture the acoustic properties of sound in our 1-minute recordings. Per sound file, this index captures the fraction of cells in each noise-reduced frequency bin whose value exceeds a 3 dB threshold. By using this spectral acoustic index, we greatly condense the amount of information contained in these sound files while retaining important data on their time-frequency features. For more information on spectral acoustic indices are their use, check out [this](https://research.ecosounds.org/research/eadm-towsey/long-duration-audio-recordings-of-the-environment) website.\
+\
+To calculate these spectral indices, we will use the `ss_index_calc()` function. This function calls on the 'AnalysisPrograms' software tool, developed by the QUT Ecoacoustic group, to compute a series of spectral acoustic indices.\
+\
+
+Let's take a look at the input parameters of the `ss_index_calc` function:
+
+<div class="warning" style='background-color:#ffd2c2; color: #000000; border-left: solid #db5f32 4px; border-radius: 4px; padding:0.7em;'>
+<span>
+<p style='margin-top:1em; text-align:center'>
+<b>Function input parameters</b></p>
+<p style='margin-left:1em;'>
+
+- <span style="font-weight: bold;">fileloc:</span><br> The full-length path to the folder containing the sound files for which to compute indices. In our case, for each plot, we stored the sound files in a separate folder which we will supply to the fileloc argument.<br><br>
+
+- <span style="font-weight: bold;">outputloc:</span><br> The full-length path to the location where you wish to save the output files. Defaults to the same location as the fileloc.<br><br>
+
+- <span style="font-weight: bold;">samplerate:</span><br> The number of times the sound was sampled each second. This is a fixed parameter determined by your recording setup, although downsampling to a lower sampling rate is possible.<br><br>
+
+- <span style="font-weight: bold;">window:</span><br> A variable of the Fast Fourier Transformation, expressed as the number of samples. The window size of choice depends on the fundamental frequency, intensity and change of the signal of interest, and influences the temporal and frequency resolution of the analysis. The window size is generally a power of 2.<br><br>
+
+- <span style="font-weight: bold;">parallel:</span><br> A boolean flag (TRUE of FALSE) indicating whether parallel processing should be enabled for index computation. Set to FALSE by default.
+
+</p>
+</span>
+</div>
+
+
+In case the duration of each sound file is longer than 1 minute, the function cuts the files into 1-minute segments before index calculation.
+
+##### B. In practice
+
+Below, you can find the code to calculate the CVR-index for all sound files in a folder. 
+
+```{r}
+
+# ss_index_calc(fileloc = "filepath_here",
+#               outputloc = "filepath_here",
+#               samplerate = 44100,
+#               window = 256,
+#               parallel = FALSE)
+                        
+
+
+```
+
+Because the index calculation can be time consuming, for the purposes of this vignette, here we will download the CVR-index '.csv' files we previously calculated from the [KNB repository](doi:10.5063/F1WQ0285): 
+
+```{r, results='hide'}
+
+  # 1. Download the metajam package 
+
+# install.packages("metajam")
+
+  # 2. Set folder location to save data
+
+setwd("G:/soundscapeR_case_study")
+
+dir.create(paste0(getwd(), "/case_study_data"))
+
+output_dir <- paste0(getwd(), "/case_study_data")
+
+  # 3. Download data and metadata
+
+# metajam::download_d1_data(data_url = "https://knb.ecoinformatics.org/knb/d1/mn/v2/object/urn%3Auuid%3Acfccc678-27f3-473a-b34a-b4b5d4371e6b", path = ".")
+# 
+#   # 4. Unzip
+# 
+# to_unzip <- list.files(output_dir, full.names = TRUE)
+# 
+# sapply(to_unzip, function(x) unzip(zipfile = x,exdir = output_dir, overwrite = TRUE))
+
+  # Specify the folder locations
+
+folder_locs <- list.dirs(path = output_dir, recursive = FALSE)
+
+```
+
+In addition to the sound data, we will also require some metadata for the downstream analysis, so let's prepare a metadata object. 
+
+**Make a metadata object:**
+
+```{r}
+
+island_metadata <- data.frame(plot = c("Aline", "Mascote_A1", "Mascote_A2", "Mascote_B1", "Mascote_B2"), 
+                              first_day = c("2015-07-10", rep("2015-10-16", 4)), 
+                              lat = c(-1.54838, -1.64506, -1.6489, -1.64406, -1.65936), 
+                              lon = c(-59.75128, -59.82035, -59.83297, -59.84817, -59.83546), 
+                              folder_locs = folder_locs)
+
+
+
+```
+
+
+------------------------------------------------------------------------
+
+### 1.2. The `ss_create` function
+
+##### A. In theory
+
+Following index computation, we use the `ss_create` function to create a *soundscape* object. 
+
+**The `ss_create` function is a wrapper function combining the functionality of three functions in sequence:**
+
+-  **`ss_index_merge`:** Performs chronological concatenation of the CVR index files into a time-frequency-index value data frame\
+    \
+
+-  **`ss_binarize`:** Converts the raw CVR values of OSUs into a binary detection (1)/ non-detection (0) variable for each day in the recording period\
+    \
+
+-  **`ss_aggregate`:** Calculates the incidence of OSUs across all sampled days\
+    \
+
+Although each of these sub-functions can be used individually, in most cases, the `ss_create` function will cover the needs of the user in a single step.
+
+Let's take a look at the input parameters for the `ss_create` function:
+
+<div class="warning" style='background-color:#ffd2c2; color: #000000; border-left: solid #db5f32 4px; border-radius: 4px; padding:0.7em;'>
+<span>
+<p style='margin-top:1em; text-align:center'>
+<b>Function input parameters</b></p>
+<p style='margin-left:1em;'>
+
+- <span style="font-weight: bold;">fileloc:</span><br> The full-length path to the folder containing the sound files for which to compute indices. In our case, for each plot, we stored the sound files in a separate folder which we will supply to the fileloc argument.<br><br>
+
+- <span style="font-weight: bold;">samplerate:</span><br> The number of times the sound was sampled each second. This is a fixed parameter determined by your recording setup, although downsampling to a lower sampling rate is possible.<br><br>
+
+- <span style="font-weight: bold;">window:</span><br> A variable of the Fast Fourier Transformation, expressed as the number of samples. The window size of choice depends on the fundamental frequency, intensity and change of the signal of interest, and influences the temporal and frequency resolution of the analysis. The window size is generally a power of 2.<br><br>
+
+- <span style="font-weight: bold;">index:</span><br> The acoustic index of interest. Options are "BGN", "PMN", "CVR", "EVN", "ENT", "ACI", "OSC", "SPT", "RHZ", "RVT", "RPS" and "RNG". For a brief description of indices, consult the ss_index_calc documentation. Note that the soundscape diversity metrics that can be calculated downstream have only been tested using the Acoustic Cover (CVR) index.
+
+- <span style="font-weight: bold;">date:</span><br> The first day of the recording period. Used for managing time-objects in R. Formatted as "YYYY-mm-dd.
+
+- <span style="font-weight: bold;">lat:</span><br> The latitude of the site at which the sound files were collected. Coordinates should be specified in decimal degrees as a numerical variable.
+
+- <span style="font-weight: bold;">lon:</span><br> The longitude of the site at which the sound files were collected. Coordinates should be specified in decimal degrees as a numerical variable.
+
+- <span style="font-weight: bold;">method:</span><br> The algorithm used to determine the threshold. Options are "IJDefault","Huang", "Huang2", "Intermodes", "IsoData", "Li", "MaxEntropy", "Mean", "MinErrorI", "Minimum", "Moments", "Otsu", "Percentile", "RenyiEntropy", "Shanbhag", "Triangle", "Yen", and "Mode". To specify a custom threshold, use method="Custom" in combination with the value argument. Consult http://imagej.net/Auto_Threshold for more information on algorithm methodologies.
+
+- <span style="font-weight: bold;">value:</span><br> Optional argument used to set a custom threshold value for binarization - used in combination with method="Custom".
+
+- <span style="font-weight: bold;">output:</span><br> Determines whether the function returns the raw total number of detections per time during the recording period (output = "raw"), or the incidence frequency (total number of detections / number of recordings for that time - output = "incidence_freq).
+
+</p>
+</span>
+</div>
+    
+    
+The `ss_create` function returns an S4 *soundscape* object. \
+\
+
+
+##### B. In practice
+
+Now that we know which input parameters to provide, let's give this a try. We will prepare the soundscape objects for our five plots on the two islands described above. We can use the `lapply` function to iterate over the metadata we previously saved. 
+
+**Let's run the `ss_create` function:**
+
+```{r, results='hide'}
+
+soundscape_list <- 
+  
+  lapply(X = 1:nrow(island_metadata), function(x) 
+    ss_create(fileloc = island_metadata$folder_locs[x], 
+              samplerate = 44100,
+              window = 256, 
+              index = "CVR", 
+              date = island_metadata$first_day[x], 
+              lat = island_metadata$lat[x], 
+              lon = island_metadata$lon[x], 
+              method = "IsoData", 
+              output = "incidence_freq"))
+                            
+
+names(soundscape_list) <- c("Aline", "Mascote_A1", "Mascote_A2", "Mascote_B1", "Mascote_B2")
+
+
+```
+
+Doing so, we will get a list of soundscape objects for further analysis. But before we proceed with phase two of the pipeline, let's have a closer look at this *'soundscape'* object in the next section!
+
+
+------------------------------------------------------------------------
+
+### 1.3. Introducing the `soundscape` object
+
+As we previously mentioned, the `ss_create` function requires us to provide some additional metadata information, as well as several parameters on how the data should be processed. Using the `ss_create` function, we are creating a new type of data object which stores all the relevant information, and will form the basis on which all subsequent functions in the workflow are performed! 
+
+\
+
+**Let's take a look at this newly created object for Aline island:**
+
+```{r}
+
+# Let's see what class this object is:
+
+summary(soundscape_list[["Aline"]])
+
+```
+
+This new data object is an 'S4' object of the class *soundscape*.
+
+```{r}
+
+# Let's see what sort of information this object holds
+
+soundscape_list[["Aline"]]
+
+
+```
+
+**As we can see, this objects holds two types of information:**
+
+-   **Metadata:** Information regarding the data collection and which parameters where used in the different steps of preparing the soundscape object\
+    \
+
+-   **Soundscape information:** Various intermediate data objects that are created as the `ss_create` function works its way through the index concatenation, binarization and computation of OSU abundance steps. \
+    \
+
+
+To access the information stored in this object, we will use the **'@'** symbol. 
+
+**Let's take a look at which types of data are stored in the object so far:**
+
+```{r}
+
+# Let's check what sort of data collection metadata is stored in the object
+
+print(paste0("First day of data collection: ", soundscape_list[["Aline"]]@first_day))
+print(paste0("Latitude at data collection site: ", soundscape_list[["Aline"]]@lat))
+print(paste0("Longitude at data collection site: ", soundscape_list[["Aline"]]@lon))
+print(paste0("Time zone at data collection site: ", soundscape_list[["Aline"]]@tz))
+print(paste0("Sunrise at time of data collection: ", soundscape_list[["Aline"]]@sunrise))
+print(paste0("Sunset at time of data collection: ", soundscape_list[["Aline"]]@sunset))
+
+```
+
+The `ss_create` function has automatically calculated a set of important ecological variables, such as sunrise and sunset times, and timezones, based on the first day of recording and geographical coordinates. 
+
+**Let's continue looking at the data stored in the *soundscape* object:**
+
+```{r}
+
+# Let's check what sort of metadata the object has stored regarding past data processing steps
+
+print(paste0("Where are the raw sound files located: ", soundscape_list[["Aline"]]@fileloc))
+print(paste0("What acoustic index are we using: ", soundscape_list[["Aline"]]@index, " index"))
+print(paste0("What was the samplerate used to collect the data: ", soundscape_list[["Aline"]]@samplerate, " Hz"))
+print(paste0("What was the window length used during the FFT: ", soundscape_list[["Aline"]]@window, " samples"))
+
+```
+
+The *soundscape* object has recorded where our raw data files are stored, which acoustic index we're working with, what sampling rate was used during data collection, and what window length was used during the acoustic index calculation. 
+
+**Let's take a look at some of the data frames we created by running the `ss_create` function: **
+
+```{r}
+
+head(soundscape_list[["Aline"]]@merged_df)[,1:5]
+
+```
+
+As we previously mentioned, the first step performed by the `ss_create` function is the chronological concatenation of the CVR-index files for a site into a time-frequency-index value data frame. This data frame is stored in the '@merged_df' slot, and contains the time-of-recording as column names, the frequency bins as row names, and the CVR-index for each time-frequency pair as values. Each column contains the spectral index values of a single sound file. 
+
+**Let's inspect this data frame a little closer:**
+
+```{r}
+
+# How many columns does the data frame contain?
+
+paste0("The data frame contains: ", ncol(soundscape_list[["Aline"]]@merged_df), " columns")
+
+# What are the column names?
+
+head(colnames(soundscape_list[["Aline"]]@merged_df))
+tail(colnames(soundscape_list[["Aline"]]@merged_df))
+
+```
+
+As we said, the number of columns equals the number of sound files collected during the acoustic survey - in this case, 1440 sound files. The name of each column corresponds to the time of day at which the recording was collected. 
+
+**Next, let's take a look at the rows:**
+
+```{r}
+
+# How many rows does the data frame contain?
+
+paste0("The data frame contains: ", nrow(soundscape_list[["Aline"]]@merged_df), " rows")
+
+# What do these row names look like?
+
+  # The first five names
+
+paste0("The first five rownames: ", paste0(rownames(soundscape_list[["Aline"]]@merged_df)[1:5], collapse = ", "))
+
+  # The last five names
+
+paste0("The last five rownames: ", paste0(rownames(soundscape_list[["Aline"]]@merged_df)[123:128], collapse = ", "))
+
+
+```
+
+The data frame contains 128 rows, each corresponding to a unique frequency bin. The frequency bins range from 0 - 22,050 Hz, and are of approximately 172 Hz width. 
+
+**Now, let's inspect the CVR-index values:**
+
+```{r}
+
+# What is the minimum CVR-index value in our data frame?
+
+paste0("The minimum CVR-value in our data frame is: ", min(soundscape_list[["Aline"]]@merged_df))
+
+# What is the maximum CVR-index value in our data frame?
+
+paste0("The max CVR-value in our data frame is: ", max(soundscape_list[["Aline"]]@merged_df))
+
+
+```
+
+As we can see, in our dataset, the CVR-index values range between 0 - 0.80. Remember, CVR-index values capture the proportion of cells in each noise-reduced frequency bin of a sound file that exceeds a 3-dB amplitude threshold. As such, the values can technically range between 0-1. 
+
+After the CVR-indices for a soundscape recording of a site have been chronologically concatenated, instead of using the raw CVR-values that we computed for every OSU in each 24h sample of the soundscape, the `ss_create` function determines a threshold value for each site, and converts the OSU's CVR-index values into a binary detection (1) / non-detection (0) variable per 24h sample based on this threshold. This step is aimed at detecting the presence of sound for every OSU in each 24h sample of acoustic trait space while removing low-amplitude or transient sounds, which potentially have a non-biological origin, from the data. In this way, we hope to capture the acoustic structure of the soundscape while removing background noise.\ 
+
+**We can see that the *soundscape* objects produced by the `ss_create` function has some new metadata related to this binarization step:**
+
+```{r}
+
+# Which threshold algorithm was used for binarization?
+
+paste0("The ", soundscape_list[["Aline"]]@binarization_method, " method was used for binarization")
+
+# Which threshold was used for binarization?
+
+paste0("The threshold used for binarization was: ", soundscape_list[["Aline"]]@threshold)
+
+
+```
+
+Additionally, a `binarized_df` data frame was added to the object. 
+
+**Let's inspect this data frame:**
+
+```{r}
+
+# What are the dimensions of the binarized dataframe?
+
+dim(soundscape_list[["Aline"]]@binarized_df)
+
+# What are the unique values contained in this data frame?
+
+unique(unlist(soundscape_list[["Aline"]]@binarized_df))
+
+```
+
+As expected, the new binarized data frame contains the same number of rows and columns as the `merged_df` data frame. However, whereas previously we had CVR-index values ranging between anywhere between 0-1, due to the binarization step, the values are now strictly 0 or 1.
+
+Finally, after binarization, the `ss_create` function calculates the relative abundance of OSUs across all 24h samples of acoustic trait space for a site. For Aline island, we have five 24h samples (5 recording days) per plot.\
+\
+To do this, the function uses an incidence-based approach. Previously, the `ss_create` function computed the detection (1) / non-detection (0) of each OSU in each 24h soundscape sample. Next, per OSU, the function takes the mean of this binary variable across all 24h soundscape samples to get the relative frequency by which each OSU was detected. To avoid confusion between the frequency of OSU detection and the sound frequency (in Hz), we'll refer to this OSU importance value as the *'relative abundance'*.\
+
+The *soundscape* object contains some information related to this step. Let's investigate the *soundscape* object for Aline island to see what is new.
+\
+
+**What are the dimensions of the new *'aggregated_df'* data frame?**\
+\
+
+```{r}
+
+# First, let's check out the new 'aggregated_df' data frame
+
+paste0("The aggregated_df data frame has ", 
+       nrow(soundscape_list[["Aline"]]@aggregated_df), 
+       " rows")
+
+paste0("The aggregated_df data frame has ", 
+       ncol(soundscape_list[["Aline"]]@aggregated_df), 
+       " columns")
+
+```
+
+\
+The number of rows in the *'aggregated_df'* data frame that was added to the *soundscape* object is still 128, one for each frequency bins resulting from the Fast Fourier Transformation. However, the number of columns in the *'aggregated_df'* data frame is 288 - that is five times less than the *'binarized_df'* data frame! Well, since we averaged the detection/non-detection values across five 24h samples of the acoustic trait space, this makes sense...\
+\
+**Now, what range of values do the OSU relative abundances take?**\
+\
+
+```{r aggregate_df_inspection-2, exercise = TRUE}
+
+paste0("The relative abundance of OSUs can take the following values: ", 
+       paste(sort(unique(unlist(soundscape_list[["Aline"]]@aggregated_df))), collapse = ","))
+
+```
+
+\
+The relative abundance can take 6 values: 0, 0.2, 0.4, 0.6, 0.8 and 1. This makes sense. If an OSU was detected in 0 out of 5 soundscape samples, its relative abundance is 0. If an OSU was detected in 5 out of 5 soundscape samples, its relative abundance is 1. If it was detected somewhere in between, say 3 out of 5 samples, its relative abundance would be 0.6.\
+\
+Great, we've got a soundscape object that contains a dataframe with our a unit of diversity measurement (OSUs) with an associated importance value (the relative abundance). We now have all the ingredients to start the next part of the workflow: exploration and diversity quantification of a single soundscape object. 
+
+\
+
+**The remaining functions in the `soundscapeR` package can be divided into two types:**
+
+-  **Phase 2:** Functions for exploring and visualizing the diversity of a single soundscape\
+    \
+
+-  **Phase 3:** Functions for visualizing and contrasting the diversity of multiple soundscapes\
+    \
+    
+------------------------------------------------------------------------
+
+## Phase II: Exploring a single soundscape
+
+The `soundscapeR` package contains a range of functions to explore the diversity patterns of a single soundscape object. These include functions for visualizing the overall soundscape (`ss_heatmap`), functions for quantifying soundscape diversity metrics for a range of spectro-temporal subsets (`ss_diversity` & `ss_evenness`), and functions for visualizing diversity patterns throughout the day or for different frequency bins (`ss_diversity_plot`). \
+
+We will go deeper into each of these functions in the following section. \
+\
+
+### 2.1. The `ss_heatmap` function
+
+The `ss_heatmap` function allows us to visualize the distribution and relative abundance of OSUs in the 24h acoustic trait space. This function is a true workhorse - it is highly flexible, allowing us to subset the soundscape by specific time or frequency coordinates, portray the soundscape in either Cartesian or polar coordinates, annotate the soundscape with the sunset and sunrise time, and many more. Below, we'll provide an overview of `ss_heatmap`'s abilities.
+
+Let's take a look at the soundscape for Aline island. We will start with the `ss_heatmap` function in it's most basic form and add progressively more advanced plotting arguments.\
+\
+
+##### A basic heatmap
+
+
+In it's most basic form, the `ss_heatmap` function only takes a single argument. 
+
+<div class="warning" style='background-color:#ffd2c2; color: #000000; border-left: solid #db5f32 4px; border-radius: 4px; padding:0.7em;'>
+<span>
+<p style='margin-top:1em; text-align:center'>
+<b>Mandatory input parameters</b></p>
+<p style='margin-left:1em;'>
+
+- <span style="font-weight: bold;">soundscape_obj:</span><br> a *soundscape* object produced by the ss_create function (or ss_index_merge, ss_binarize and ss_aggregate functions applied in sequence).<br><br>
+
+</p>
+</span>
+</div>
+
+
+**In practice, the code looks as follows:**
+
+```{r, fig.height= 7, fig.width= 7, warning=FALSE, error=FALSE, comment=FALSE}
+
+ss_heatmap(soundscape_obj = soundscape_list[["Aline"]])
+
+```
+
+The heatmap shows us that, above 12,000 Hz, Aline's soundscape is pretty empty. We can also see that most of the sound is present at night and the daytime soundscape is much more impoverished. The vertical banding we see in petrol blue between 19-20h is likely cause by some sort of non-biological noise, such as a rain storm. Finally, the yellow band at the top is because the recorder was not able to record sound at this frequency - we will see how to remove this from the heatmap at a later stage.\
+\
+Even in it's most simple form, the heatmap reveals quite a lot about a soundscape. Without looking at species-specific information or listening to sound files, we have just obtained ecologically relevant information from 24 full hours of recording (1440 1-minute files). Now, imagine you have many sites and longer recording periods... This is where the true value of the `soundscapeR` workflow lies!\
+\
+
+##### A polar heatmap
+
+In addition to the base heatmap we produced above, the `ss_heatmap` function also allows us to plot the heatmap in a polar coordinate system. 
+
+<div class="warning" style='background-color:#ffd2c2; color: #000000; border-left: solid #db5f32 4px; border-radius: 4px; padding:0.7em;'>
+<span>
+<p style='margin-top:1em; text-align:center'>
+<b>Parameters to change the coordinate system</b></p>
+<p style='margin-left:1em;'>
+
+- <span style="font-weight: bold;">type:</span><br> A character string. One of either "regular" or "polar". If set to "regular", produces a regular rectangular heatmap. If set to "polar", produces a heatmap in the polar coordinate system.<br><br>
+
+</p>
+</span>
+</div>
+
+
+**To understand what this argument does, let's try *type = "polar"*:**
+
+```{r, fig.width= 7, fig.height= 7, eval=FALSE}
+
+ss_heatmap(soundscape_obj = soundscape_list[["Aline"]],
+           type = "polar")
+
+```
+
+```{r polar_heatmap, out.width = '100%', echo=FALSE}
+
+knitr::include_graphics("images/polar_plot_1.png")
+
+```
+
+The **type** arguments let's us choose whether to plot regular (rectangular) heatmaps, like in the previous example, or polar heatmaps. And why would we want to do this, you may ask? Well, a rectangular heatmap distorts the relationships between sounds in the acoustic trait space. Imagine two sounds, one that is produced at 15,000 Hz around 23:55h at night, and the other at 15,000 Hz at 00:05h in the morning. On our rectangular heatmap, these two sounds would be perceived as distant in the acoustic trait space, as they would be on opposite ends. From an ecological and functional perspective, these sounds are actually quite similar - they were produced at the same frequency at 10 minutes apart... The polar heatmap captures this relationship more accurately.\
+\
+
+##### An annotated heatmap
+
+Next up, let's have a look at how we can add some ecologically important varibles to this plot: the time of sunrise, sunset, and if applicable, the approximate boundary between the human-audible and ultrasonic frequency spectrum. 
+
+<div class="warning" style='background-color:#ffd2c2; color: #000000; border-left: solid #db5f32 4px; border-radius: 4px; padding:0.7em;'>
+<span>
+<p style='margin-top:1em; text-align:center'>
+<b>Parameters to add ecologically relevant variables</b></p>
+<p style='margin-left:1em;'>
+
+- <span style="font-weight: bold;">annotate:</span><br> A Boolean operator. One of either TRUE or FALSE. If set to TRUE, annotates the heatmap with sunrise and sunset times and highlights the border between the audible and ultrasonic spectrum for human hearing.<br><br>
+
+</p>
+</span>
+</div>
+
+**Let's try this out for the regular and polar heatmap:**
+
+```{r, eval=FALSE}
+
+# Regular heatmap
+
+regular_heatmap_annotated <- 
+  ss_heatmap(soundscape_obj = soundscape_list[["Aline"]],
+             type = "regular", 
+             annotate = TRUE)
+
+# Polar heatmap
+
+polar_heatmap_annotated <- 
+  ss_heatmap(soundscape_obj = soundscape_list[["Aline"]],
+             type = "polar", 
+             annotate = TRUE)
+
+# Combine
+
+library(patchwork)
+
+annotated_heatmaps <- regular_heatmap_annotated + polar_heatmap_annotated
+
+annotated_heatmaps
+
+```
+
+```{r annotated_heatmap, out.width = '100%', echo=FALSE}
+
+knitr::include_graphics("images/annotated_heatmaps.png")
+
+```
+
+With the addition of one simple argument, the `ss_heatmap` function annotates the heatmap with the time of sunrise and sunset (stored in the *soundscape* object) and the boundary between the audible and ultrasonic spectrum. The part of the soundscape that occurs in the day is highlighted in yellow, whereas the nighttime is highlighted in blue.
+
+\
+
+##### Alter the axis labels
+
+The `ss_heatmap` function also contains parameters to change the aesthetics of the axis labels. 
+
+<div class="warning" style='background-color:#ffd2c2; color: #000000; border-left: solid #db5f32 4px; border-radius: 4px; padding:0.7em;'>
+<span>
+<p style='margin-top:1em; text-align:center'>
+<b>Parameters to change the axis label aesthetics</b></p>
+<p style='margin-left:1em;'>
+
+- <span style="font-weight: bold;">timeinterval:</span><br> A time interval for the x-axis. Options can be found in the [scales::breaks_width](https://scales.r-lib.org/reference/breaks_width.html) documentation.<br><br>
+
+- <span style="font-weight: bold;">freqinterval:</span><br>  The frequency interval for the y-axis, expressed as a numeric value.<br><br>
+
+</p>
+</span>
+</div>
+
+
+**Let's try this out for the Aline island soundscape using a regular heatmap with a 4 hour x-axis interval and 1000 Hz y-axis interval:**
+
+```{r, fig.height=7, fig.width=7}
+
+ss_heatmap(soundscape_obj = soundscape_list[["Aline"]],
+           timeinterval = "4 hours", 
+           freqinterval = 1000)
+
+
+
+```
+
+\
+
+##### Subset the soundscape in the time or frequency domain
+
+If we are only interested the a subset of the acoustic trait space, the `ss_heatmap` function contains a number of parameters to perform time-frequency subsetting. 
+
+<div class="warning" style='background-color:#ffd2c2; color: #000000; border-left: solid #db5f32 4px; border-radius: 4px; padding:0.7em;'>
+<span>
+<p style='margin-top:1em; text-align:center'>
+<b>Parameters to change subset the acoustic trait space</b></p>
+<p style='margin-left:1em;'>
+
+- <span style="font-weight: bold;">mintime:</span><br> The lower time limit for the x-axis, formatted as "HH:MM:SS". Defaults to the earliest time for which data exists in the dataframe.<br><br>
+
+- <span style="font-weight: bold;">maxtime:</span><br>  The upper time limit for the x-axis, formatted as "HH:MM:SS".Defaults to the latest time for which data exists in the dataframe.<br><br>
+
+- <span style="font-weight: bold;">minfreq:</span><br>  The lower frequency limit for the y-axis as a numeric value. Defaults to zero.<br><br>
+
+- <span style="font-weight: bold;">maxfreq:</span><br>  The lower frequency limit for the y-axis as a numeric value. Defaults to zero.<br><br>
+
+</p>
+</span>
+</div>
+
+
+**Let's try visualizing the Aline island soundscape between 06:00h and 18:00h for frequencies between 0 - 11,000 Hz:**
+
+```{r, fig.height=7, fig.width=7}
+
+ss_heatmap(soundscape_obj = soundscape_list[["Aline"]],
+           mintime = "06:00:00", 
+           maxtime = "18:00:00" , 
+           minfreq = 0 , 
+           maxfreq = 11000)
+
+
+```
+
+\
+
+##### Alter the heatmap's color aesthetics
+
+We can also alter the color aesthetics that are mapped to the OSU relative abundance values in the heatmap. 
+
+<div class="warning" style='background-color:#ffd2c2; color: #000000; border-left: solid #db5f32 4px; border-radius: 4px; padding:0.7em;'>
+<span>
+<p style='margin-top:1em; text-align:center'>
+<b>Parameters to change the color aesthetics</b></p>
+<p style='margin-left:1em;'>
+
+- <span style="font-weight: bold;">palette:</span><br> A character string indicating the colormap option to use. Four options are available: "magma" (or "A"), "inferno" (or "B"), "plasma" (or "C"), "viridis" (or "D", the default option) and "cividis" (or "E"). Consult [this website](https://www.rdocumentation.org/packages/viridisLite/versions/0.3.0/topics/viridis) for options.<br><br>
+
+- <span style="font-weight: bold;">direction:</span><br>  Sets the order of colors in the scale. If 1, the default, the regular order is followed. If -1, the order of colors is reversed.<br><br>
+
+- <span style="font-weight: bold;">zero.black:</span><br>  One of either TRUE or FALSE. If set to TRUE, absent OSUs with incidence zero will be colored black.<br><br>
+
+</p>
+</span>
+</div>
+
+**We can try to see what these do by adding them in one by one. Up first is the palette option. Let's try them all on Aline island's soundscape:**
+
+```{r, fig.width=21, fig.height=14}
+
+# Try the palettes one by one
+
+color_1 <- 
+  ss_heatmap(soundscape_obj = soundscape_list[["Aline"]],
+           palette = "A")
+
+color_2 <- 
+  ss_heatmap(soundscape_obj = soundscape_list[["Aline"]],
+           palette = "B")
+
+color_3 <- 
+  ss_heatmap(soundscape_obj = soundscape_list[["Aline"]],
+           palette = "C")
+
+color_4 <- 
+  ss_heatmap(soundscape_obj = soundscape_list[["Aline"]],
+           palette = "D")
+
+color_5 <- 
+  ss_heatmap(soundscape_obj = soundscape_list[["Aline"]],
+           palette = "E")
+
+
+# Combine into one plot
+
+library(patchwork)
+
+all_colors <- color_1 + color_2 + color_3 + color_4 + color_5
+
+all_colors
+
+
+```
+
+\
+With the **palette** option, we can choose which of the *viridis* color palettes is used to visualize our soundscape.
+
+\
+
+**Great, now let's test the direction variable for the "magma" color palette:**
+
+```{r, fig.width=14, fig.height=7}
+
+# Try the direction options
+
+direction_1 <- 
+  ss_heatmap(soundscape_obj = soundscape_list[["Aline"]], 
+             palette = "magma", 
+             direction = 1)
+
+direction_2 <- 
+  ss_heatmap(soundscape_obj = soundscape_list[["Aline"]], 
+             palette = "magma", 
+             direction = -1)
+
+# Combine into one plot
+
+library(patchwork)
+
+all_directions <- direction_1 + direction_2
+
+all_directions
+
+
+```
+
+\
+
+The **direction** argument can be used to inverse the color scales of the viridis R-packages, switching which colors are used for low and high values respectively.\
+\
+
+**Finally, let's see what the zero.black variable does for the regular 'viridis' palette:**
+
+```{r, fig.width=14, fig.height=7}
+
+# Try the direction options
+
+zero_black_off <- 
+  ss_heatmap(soundscape_obj = soundscape_list[["Aline"]], 
+             palette = "viridis", 
+             zero.black = FALSE)
+
+zero_black_on <- 
+  ss_heatmap(soundscape_obj = soundscape_list[["Aline"]], 
+             palette = "viridis", 
+             zero.black = TRUE)
+
+# Combine into one plot
+
+library(patchwork)
+
+zero_black_all <- zero_black_off + zero_black_on
+
+zero_black_all
+
+
+```
+
+\
+The **zero.black** argument takes all OSUs for which no sound was detected (relative abundance = 0) and sets the color to zero to increase the contrast with OSUs for which sound was detected. Be careful using the **zero.black** argument with the **direction** argument for some of the color palettes.\
+\
+
+\
+
+##### Make your heatmap interactive
+
+The `ss_heatmap` function can also be used to make interactive heatmaps.
+
+<div class="warning" style='background-color:#ffd2c2; color: #000000; border-left: solid #db5f32 4px; border-radius: 4px; padding:0.7em;'>
+<span>
+<p style='margin-top:1em; text-align:center'>
+<b>Parameters to make interactive heatmaps</b></p>
+<p style='margin-left:1em;'>
+
+- <span style="font-weight: bold;">interactive:</span><br> A Boolean operator, one of either TRUE or FALSE. If set to TRUE, an interactive plot is produced using ggplotly.<br><br>
+
+</p>
+</span>
+</div>
+
+
+**Let's make an interactive regular annotated heatmap for Aline island's soundscape:**
+
+```{r, comment= FALSE, error=FALSE, message=FALSE, warning=FALSE, echo=FALSE}
+
+ss_heatmap(soundscape_obj = soundscape_list[["Aline"]],
+           type = "regular", 
+           interactive = TRUE)
+
+
+```
+
+\
+
+Try hovering your mouse over the interactive plot we just made. The **interactive** argument lets us query the relative abundance of each OSU for a specific time of day and frequency bin. This way, we can see which sounds were more abundant or rare. For instance, we can see that the relative abundance of the OSUs around 5,340 Hz between 00:00h and 03:00h had a relative abundance of 1, meaning they were detected in every sample. Conversely, we can see that the vertical banding we picked up on between 19:00-20:00h only have a relative abundance of 0.2 - they were detected in only 1 out of 5 sampling days. This strengthens our suspicion that the vertical band may have been created by a non-biological event, such as a rainstorm.\
+
+\
+
+##### Save your heatmap
+
+Finally, the `ss_heatmap` function contains a number of arguments for saving your plot. 
+
+<div class="warning" style='background-color:#ffd2c2; color: #000000; border-left: solid #db5f32 4px; border-radius: 4px; padding:0.7em;'>
+<span>
+<p style='margin-top:1em; text-align:center'>
+<b>Parameters to save the plot</b></p>
+<p style='margin-left:1em;'>
+
+- <span style="font-weight: bold;">save:</span><br> A Boolean operator - one of either TRUE or FALSE. If set to TRUE, saves the plot using ggsave using the the 'dir', 'filename' and 'device' arguments.<br><br>
+
+- <span style="font-weight: bold;">dir:</span><br> Path of the directory to save plot to: path and filename are combined to create the fully qualified file name. Defaults to the working directory. For more information consult ggsave.<br><br>
+
+- <span style="font-weight: bold;">filename:</span><br> The file name without the extension. For more information consult ggsave.<br><br>
+
+- <span style="font-weight: bold;">device:</span><br> Device to use. Can either be a device function (e.g. png()), or one of "eps", "ps", "tex" (pictex), "pdf", "jpeg", "tiff", "png", "bmp", "svg" or "wmf" (windows only). Defaults to "png". For more information consult ggsave.<br><br>
+
+- <span style="font-weight: bold;">width:</span><br> If save=TRUE, expresses the width of the saved image in milimeters. Defaults to 100 mm.<br><br>
+
+- <span style="font-weight: bold;">height:</span><br> If save=TRUE, expresses the height of the saved image in milimeters. Defaults to 100 mm.<br><br>
+
+</p>
+</span>
+</div>
+
+
+These arguments rely on the [`ggsave`](https://ggplot2.tidyverse.org/reference/ggsave.html) function from the `ggplot2` package. For additional information of how to save your `soundscapeR` heatmap, consult the `ggsave` documentation.
+
+------------------------------------------------------------------------
+
+### 2.2. A note on Hill numbers
+
+Now that we know how to visually explore the diversity of our soundscape, let's get to quantifying how much diversity we're actually dealing with using the various soundscape metrics available in the `soundscapeR` package. 
+
+To calculate the soundscape metrics, we use the analytical framework of **Hill numbers**. In brief, Hill numbers provide a unified statistical framework to measure biological diversity in all its facets. The framework is highly robust and flexible, allowing us to quantify different dimensions of diversity (*e.g.* taxonomic, functional, phylogenetic and soundscape diversity). Doing so, we can answer common scientific questions by measuring, estimating, partitioning, and comparing different diversity types using a common analytical framework. Although a plethora of indices has been proposed to measure diversity, there is a growing consensus that Hill numbers are the most appropriate framework to separate system diversity into its various components.\
+\
+Want to know more about Hill numbers? For a deep dive, visit [this website](http://www.loujost.com/Statistics%20and%20Physics/Diversity%20and%20Similarity/DiversitySimilarityHome.htm) and [this GitHub tutorial](https://github.com/anttonalberdi/CLIMBATS_school_2020/tree/master/diversity_hillnumbers)!\
+\
+For an overview of the benefits of Hill numbers over conventional diversity indices, expand the section below. If you're familiar with Hill numbers, feel free to skip over this part. \
+\
+
+
+<details>
+  <summary>**CLICK HERE TO LEARN MORE ABOUT THE ADVANTAGES OF HILL NUMBERS**</summary>
+\
+
+<div class="warning" style='background-color:#cfd5ff; color: #000000; border-left: solid #44496e 4px; border-radius: 4px; padding:0.7em;'>
+<span>
+<p style='margin-top:1em; text-align:center'>
+<b>ADVANTAGES OF USING HILL NUMBERS</b></p>
+<p style='margin-left:1em;'>
+
+- <span style="font-weight: bold;">1. They abide by the replication principle:</span><br> If two equally diverse but completely distinct assemblages (no species in common, but an identical relative abundance distribution) are grouped, the diversity metric should double. This is true for Hill numbers, but not true for entropy based indices such as the Shannon and Simpson indices.<br><br>
+
+- <span style="font-weight: bold;">2. They are expressed in the 'effective number of species/units':</span><br>  The 'Effective Number of Species' (ENS) represents the number of equally common species or diversity units required to give a particular diversity index value. But why should we convert our index values to the ENS? Converting indices to their true diversities (ENS) gives them a set of common behaviors and properties. In this way, different indices can be more easily compared. For instance, this conversion deals with the non-linearity the troubles most classical diversity indices. The linear scaling provided ENS allows true comparison of diversities - if one community has diversity 5 (ENS), and the second community has diversity 15 (ENS), we can truly say the second community is three times as diverse as the first community. We could not say this with non-linear diversity indices, such as the Simpson and Shannon indices.  Point 1 and 2 both relate to the linear scaling of diversity indices with the underlying diversity of the ecological community. For an overview of how Hill numbers scale linearly with the underlying diversity, but the Shannon and Simpson indices do not, visit [this](https://jonlefcheck.net/2012/10/23/diversity-as-effective-numbers/) website.<br><br>
+
+- <span style="font-weight: bold;">3. Some of the most commonly used diversity indices in literature can be converted into Hill numbers using simple transformations</span><br><br>
+
+- <span style="font-weight: bold;">4. Hill numbers can be used to quantify taxonomic, functional, phylogenetic and soundscape diversity:</span><br> Using this unified comparative framework gives metrics a common behavior, interpretation, and standardized unit. This ensures that comparisons between different dimensions of diversity represent real-world ecological patterns, and not mathematical stemming from different formulae.<br><br>
+
+- <span style="font-weight: bold;">5. Hill numbers can be used to decompose diversity into its alpha, beta and gamma components using a simple multiplicative framework:</span><br> For Hill numbers, Gamma = Alpha x Beta. This simple multiplicative framework allows the decomposition of the metacommunity diversity into its local diversity and community turnover components.<br><br>
+
+</p>
+</span>
+</div>
+
+
+</details> 
+
+\
+
+Now that we know why we use Hill numbers, let's have a look at how we can compute our soundscape metrics. 
+
+
+------------------------------------------------------------------------
+
+### 2.3. The `ss_diversity` and `ss_evenness` functions
+
+The `ss_diversity` function is used to compute the soundscape richness and diversity values. The user can modulate the importance of common or rare OSUs on the diversity values using the q-parameter (order of diversity). 
+
+The `ss_evenness` function is used to compute the soundscape evenness. In [Luypaert et al. (2022)](https://besjournals.onlinelibrary.wiley.com/doi/full/10.1111/2041-210X.13924), we mentioned the soundscape evenness was calculated as 2D (soundscape diversiy with q = 2)/0D (soundscape richness with q = 0), following [Jost et al. (2010)](https://www.mdpi.com/1424-2818/2/2/207). However, However, based on recent [publications](https://esajournals.onlinelibrary.wiley.com/doi/10.1002/ecy.2852), a more proper way to calculate the soundscape evenness is: (2D - 1) / (0D - 1). Therefore, from here on out, we will only use the latter equation for the calculation of the soundscape evenness. 
+
+Both functions allow the soundscape metrics to be computed at a range of different scales and resolutions. For instance, the user can specify custom time-frequency limits, calculate the soundscape metrics for various built-in diurnal-phase presets (dawn, dusk, day, night), or track the soundscape metrics at each unique time of day. 
+\
+
+##### The soundscape richness and diversity for the whole soundscape
+\
+
+In their most basic forms, both the `ss_diversity` and `ss_evenness`functions are used to compute soundscape metrics for the whole soundscape. For this, the `ss_diversity` function requires three main input parameters. 
+
+<div class="warning" style='background-color:#ffd2c2; color: #000000; border-left: solid #db5f32 4px; border-radius: 4px; padding:0.7em;'>
+<span>
+<p style='margin-top:1em; text-align:center'>
+<b>Mandatory function input parameters</b></p>
+<p style='margin-left:1em;'>
+
+- <span style="font-weight: bold;">soundscape_obj:</span><br> a *soundscape* object produced by the ss_create function (or ss_index_merge, ss_binarize and ss_aggregate functions applied in sequence).<br><br>
+
+- <span style="font-weight: bold;">qvalue:</span><br> A positive integer or decimal number (>=0), most commonly between 0-3. This parameter modulates the sensitivity of diversity values to the relative abundance of Operational Sound Units (OSUs). A value of 0 corresponds to the richness, a value of 1 is the equivalent effective number of OSUs for the Shannon index, a value of 2 is the equivalent effective number of OSUs for the Simpson index.<br><br>
+
+- <span style="font-weight: bold;">output:</span><br> A character string. Indicates the format in which the soundscape diversity is expressed. Options are "percentage" (the fraction between the observed soundscape diversity and the maximum possible soundscape diversity), or "raw" (the number of acoustically active OSUs in the soundscape). Defaults to "percentage".<br><br>
+
+</p>
+</span>
+</div>
+
+
+Let's look at an example of what the various arguments are and change about the index computation. First, we will use the `ss_diversity` function to calculate the soundscape richness (*q*=0) and diversity (at *q*=1 and *q*=2) for the *soundscape_obj* of Aline island. We want the output as the 'effective number of OSUs'.
+
+**Let's try out the code:**
+
+```{r, message=FALSE}
+
+# Soundscape richness
+
+ss_diversity(soundscape_obj = soundscape_list[["Aline"]], 
+         qvalue = 0, 
+         output = "raw")
+
+# Soundscape diversity at q=1
+
+ss_diversity(soundscape_obj = soundscape_list[["Aline"]],
+         qvalue = 1, 
+        output = "raw")
+
+# Soundscape diversity at q=2
+
+ss_diversity(soundscape_obj = soundscape_list[["Aline"]],
+         qvalue = 2, 
+        output = "raw")
+
+```
+
+As we can see, the higher the *q-value*, the less importance is given to rare OSUs (with a low relative abundance), and thus the lower the soundscape diversity metric. \
+\
+
+**Next, let's calculate the same soundscape diversity metrics, but display the output as the percentage of the trait space that is filled with OSUs, better known as the soundscape saturation:** 
+
+```{r, message=FALSE}
+
+# Soundscape richness
+
+ss_diversity(soundscape_obj = soundscape_list[["Aline"]],
+         qvalue = 0, 
+         output = "percentage")
+
+# Soundscape diversity at q=1
+
+ss_diversity(soundscape_obj = soundscape_list[["Aline"]],
+         qvalue = 1, 
+        output = "percentage")
+
+# Soundscape diversity at q=2
+
+ss_diversity(soundscape_obj = soundscape_list[["Aline"]],
+         qvalue = 2, 
+        output = "percentage")
+
+```
+\
+
+The `output` argument allows us to modulate how the diversity value is returned and is one of either *"raw"* or *"percentage"*. The *"raw"* option displays the soundscape diversity as the effective number of OSUs in the soundscape, whereas the *"percentage"* option returns the soundscape diversity as the number of detected OSUs divided by the total number of detectable OSUs, or the **soundscape saturation**. The latter allows us to compare the soundscape diversity between soundscapes with different dimensions (a different number of total detectable OSUs due to differences in the sampling regimes and window length). 
+
+\
+
+##### The soundscape evenness for the whole soundscape
+\
+
+In contrast to the `ss_diversity` function, the `ss_evenness` function only has one mandatory input argument. 
+
+<div class="warning" style='background-color:#ffd2c2; color: #000000; border-left: solid #db5f32 4px; border-radius: 4px; padding:0.7em;'>
+<span>
+<p style='margin-top:1em; text-align:center'>
+<b>Mandatory function input parameters</b></p>
+<p style='margin-left:1em;'>
+
+- <span style="font-weight: bold;">soundscape_obj:</span><br> a *soundscape* object produced by the ss_create function (or ss_index_merge, ss_binarize and ss_aggregate functions applied in sequence).<br><br>
+
+</p>
+</span>
+</div>
+
+As we can see, the `ss_evenness` function only requires a `soundscape` object produced by the `ss_create` function (or by using the `ss_index_merge`, `ss_binarize` and `ss_aggregate` functions in sequence). \
+
+We will use the `ss_evenness` function to calculate the soundscape evenness: 
+
+**Let's try out the code:**
+
+```{r, message=FALSE}
+
+# Soundscape evenness 
+
+ss_evenness(soundscape_obj = soundscape_list[["Aline"]])
+
+
+```
+\
+The evenness describes the equitability of abundances. Here, since *2D* represents the number of dominant OSUs in the soundscape, this evenness ratio represents the proportion of dominant OSUs. \
+\
+
+##### The soundscape metrics for temporal subsets
+\
+
+In addition to calculting the soundscape richness, diversity and evenness for the whole soundscape, we can also compute the soundscape metrics for different temporal subsets of the soundscape. 
+\
+
+<div class="warning" style='background-color:#ffd2c2; color: #000000; border-left: solid #db5f32 4px; border-radius: 4px; padding:0.7em;'>
+<span>
+<p style='margin-top:1em; text-align:center'>
+<b>Parameters for temporal soundscape subsetting</b></p>
+<p style='margin-left:1em;'>
+
+- <span style="font-weight: bold;">subset:</span><br> The diurnal phase for which the soundscape diversity is computed. Options are *'total'*, *'day'*, *'night'*, *'dawn'*, *'dusk'* and *'tod'* (time of day - for each unique time in the day).<br><br>
+
+- <span style="font-weight: bold;">mintime:</span><br> A positive integer or decimal number (>=0), most commonly between 0-3. This parameter modulates the sensitivity of diversity values to the relative abundance of Operational Sound Units (OSUs). A value of 0 corresponds to the richness, a value of 1 is the equivalent effective number of OSUs for the Shannon index, a value of 2 is the equivalent effective number of OSUs for the Simpson index.<br><br>
+
+- <span style="font-weight: bold;">maxtime:</span><br> A character string. Indicates the format in which the soundscape diversity is expressed. Options are "percentage" (the fraction between the observed soundscape diversity and the maximum possible soundscape diversity), or "raw" (the number of acoustically active OSUs in the soundscape). Defaults to "percentage".<br><br>
+
+- <span style="font-weight: bold;">dawnstart:</span><br> A character string. Indicates the format in which the soundscape diversity is expressed. Options are "percentage" (the fraction between the observed soundscape diversity and the maximum possible soundscape diversity), or "raw" (the number of acoustically active OSUs in the soundscape). Defaults to "percentage".<br><br>
+
+- <span style="font-weight: bold;">dawnend:</span><br> A character string. Indicates the format in which the soundscape diversity is expressed. Options are "percentage" (the fraction between the observed soundscape diversity and the maximum possible soundscape diversity), or "raw" (the number of acoustically active OSUs in the soundscape). Defaults to "percentage".<br><br>
+
+- <span style="font-weight: bold;">duskstart:</span><br> A character string. Indicates the format in which the soundscape diversity is expressed. Options are "percentage" (the fraction between the observed soundscape diversity and the maximum possible soundscape diversity), or "raw" (the number of acoustically active OSUs in the soundscape). Defaults to "percentage".<br><br>
+
+- <span style="font-weight: bold;">duskend:</span><br> A character string. Indicates the format in which the soundscape diversity is expressed. Options are "percentage" (the fraction between the observed soundscape diversity and the maximum possible soundscape diversity), or "raw" (the number of acoustically active OSUs in the soundscape). Defaults to "percentage".<br><br>
+
+</p>
+</span>
+</div>
+    
+**Let's calculate the soundscape richness, but for different temporal subsets by using the *subset* argument:** 
+
+```{r, message=FALSE}
+
+# Soundscape richness
+
+  # subset = 'day'
+
+ss_diversity(soundscape_obj = soundscape_list[["Aline"]], 
+             qvalue = 0, 
+             output = "percentage",
+             subset = "day")
+
+  # subset = 'night'
+
+ss_diversity(soundscape_obj = soundscape_list[["Aline"]], 
+             qvalue = 0, 
+             output = "percentage",
+             subset = "night")
+
+  # subset = 'dawn' 
+
+ss_diversity(soundscape_obj = soundscape_list[["Aline"]], 
+             qvalue = 0, 
+             output = "percentage",
+             subset = "dawn")
+
+  # subset = 'dusk'
+
+ss_diversity(soundscape_obj = soundscape_list[["Aline"]], 
+             qvalue = 0, 
+             output = "percentage",
+             subset = "dusk")
+
+```
+
+The *subset* argument uses the metadata contained in the `soundscape` object (the sunrise and sunset times) to subset the soundscapes by different diurnal phases, including *'day'*, *'night'*, *'dawn'* and *'dusk'*. We can see that the soundscape richness at Aline island was the highest at night and dawn, but the lowest during the day and around dusk. 
+
+**Let's try this for the soundscape evenness:**
+
+```{r}
+
+# Soundscape evenness
+
+  # subset = 'day'
+
+ss_evenness(soundscape_obj = soundscape_list[["Aline"]], 
+             subset = "day")
+
+  # subset = 'night'
+
+ss_evenness(soundscape_obj = soundscape_list[["Aline"]], 
+             subset = "night")
+
+  # subset = 'dawn' 
+
+ss_evenness(soundscape_obj = soundscape_list[["Aline"]], 
+             subset = "dawn")
+
+  # subset = 'dusk'
+
+ss_evenness(soundscape_obj = soundscape_list[["Aline"]], 
+             subset = "dusk")
+
+
+```
+
+We can see that the soundscape evenness metric is less variable than the soundscape richness, but still showed differences between the different diurnal phases. For instance, we find that the soundscape had a lower evenness during the day compared to the night time. This suggests there was a higher proportion of dominant OSUs during the night. 
+
+By default, the dawn period is calculated as the time of sunrise + 1.5h, and the dusk period is calculated as the time of sunset - 1.5h. We can use the *'dawnstart'*, *'dawnend'*, *'duskstart'* and *'duskend'* arguments to alter the duration of the dawn and dusk period. 
+
+**Let's try this for the soundscape richness using a dawn and dusk period that starts 1 hour before sunrise/sunset, and ends one hours after:** 
+
+```{r}
+
+# Soundscape richness
+
+ss_diversity(soundscape_obj = soundscape_list[["Aline"]], 
+             qvalue = 0, 
+             subset = "dawn", 
+             dawnstart = 3600, 
+             dawnend = 3600)
+
+ss_diversity(soundscape_obj = soundscape_list[["Aline"]], 
+             qvalue = 0, 
+             subset = "dusk",
+             duskstart = 3600, 
+             duskend = 3600)
+
+
+```
+
+As you can see, by changing the time of dawn and dusk, we get slightly different soundscape richness values. It is important to consider what period of dawn/dusk is ecologically meaningful for your study system. 
+
+**Finally, we can also use the *subset* argument to calculate the soundscape metrics for each unique time of day for which we collected sound files. Let's do this for the soundscape ricnhness:**
+
+```{r}
+
+# Soundscape richness
+
+head(ss_diversity(soundscape_obj = soundscape_list[["Aline"]], 
+             qvalue = 0, 
+             output = "percentage", 
+             subset = "tod"), n = 24)
+
+
+```
+
+We get 288 soundscape richness values (24 values shown here), one for each unique time at which we collected sound during our recording period. This can reveal patterns in the soundscape richness throughout the day. We can also use this sort of information to detect unusual times of sonic activity. For instance, here, we see there is a peak in the soundscape richness at 04:55 in the morning, when the whole soundscape is saturated (soundscape richness = 100%). This might be caused by some sort of loud geophysical event (*e.g.* rain) that saturated the recording with sound at every frequency. Indeed, when we look at the heatmap we produced earlier, we can see a vertical line across the frequency spectrum at around this time. 
+
+**Aside from the *subset* argument, we can also perform temporal subsetting of the soundscape using custom time limits by using the *mintime* and *maxtime* arguments. Let's try this out by calculating the soundscape richness between 11:00 and 13:00:**
+
+```{r}
+
+ss_diversity(soundscape_obj = soundscape_list[["Aline"]], 
+             qvalue = 0, 
+             output = "percentage",
+             mintime = "11:00:00", 
+             maxtime = "13:00:00")
+
+
+```
+\
+
+##### The soundscape metrics for frequency subsets
+
+We can also calculate the soundscape richness, diversity and evenness for user-specified frequency subsets. 
+\
+
+<div class="warning" style='background-color:#ffd2c2; color: #000000; border-left: solid #db5f32 4px; border-radius: 4px; padding:0.7em;'>
+<span>
+<p style='margin-top:1em; text-align:center'>
+<b>Parameters for frequency soundscape subsetting</b></p>
+<p style='margin-left:1em;'>
+
+- <span style="font-weight: bold;">minfreq:</span><br> A numeric value indicating the lower frequency limit for which to compute the soundscape diversity. If set to default, uses the lowest available frequency in the dataframe.<br><br>
+
+- <span style="font-weight: bold;">maxfreq:</span><br> A numeric value indicating the upper frequency limit for which to compute the soundscape diversity. If set to default, uses the highest available frequency in the dataframe.<br><br>
+
+- <span style="font-weight: bold;">freqseq:</span><br> A logical operator (TRUE/FALSE). If set to FALSE, will compute the diversity for the entire frequency range of the soundscape. If set to TRUE, will compute the diversity per frequency-bin of user-defined width (number of bins determined by nbins argument).<br><br>
+
+- <span style="font-weight: bold;">nbins:</span><br> A numeric argument. If freqseq is set to TRUE, determines the number of the frequency-bins by which to divide the frequency range to compute the soundscape diversity.<br><br>
+
+</p>
+</span>
+</div>
+
+
+**Let's try subsetting the soundscape between 0 - 10,000 Hz and 10,000 - 20,000 Hz, and calculating the soundscape richness:**
+
+```{r}
+
+# Soundscape richness 
+
+  # 0 - 10,000 Hz
+
+ss_diversity(soundscape_obj = soundscape_list[["Aline"]], 
+             qvalue = 0, 
+             output = "percentage",
+             minfreq = 0, 
+             maxfreq = 10000)
+
+  # 10,000 - 20,000 Hz
+
+ss_diversity(soundscape_obj = soundscape_list[["Aline"]], 
+             qvalue = 0, 
+             output = "percentage",
+             minfreq = 10000, 
+             maxfreq = 20000)
+
+
+
+```
+
+We can see that the soundscape richness is much higher below 10,000 Hz, suggesting there is more vocal activity there. 
+
+Finally, we can also divide the frequency spectrum into a user-specified number of bins, and calculate the soundscape metrics for each frequency bin. 
+
+**Let's try this for the soundscape richness, dividing the frequency spectrum into 20 bins:**
+
+```{r}
+
+ss_diversity(soundscape_obj = soundscape_list[["Aline"]], 
+             qvalue = 0, 
+             output = "percentage",
+             freqseq = TRUE, 
+             nbins = 20)
+
+
+```
+
+We can see that, above 11,000 Hz, the soundscape richness values drop steeply. Indeed, this is confirmed by the visual exploration of our heatmap we produced earlier, where we saw practically no sound above this frequency cut-off. 
+
+
+Clearly the `ss_diversity` and `ss_evenness` functions are highly flexible, allowing the user to tease apart when and where sound is present for a soundscape of interest. Yet, although this is certainly useful, it can be hard to get a grasp of the patterns at hand with so many subsetting options. This is where the `ss_diversity_plot` function comes in, producing a range of different visualization options that allow for an easier assessment of temporal and frequency patterns in the soundscape metrics. 
+
+------------------------------------------------------------------------
+
+### 2.3. The `ss_diversity_plot` function 
+
+The `ss_diversity_plot` function produces plots showing the variation in soundscape richness and diversity metrics by time-of-day and frequency subsets. Like the `ss_diversity` function, the `ss_diversity_plot` function takes three basic arguments: *'soundscape_obj'*, *'qvalue'* and *'output'* (see above). 
+
+Additionally, the `ss_diversity_plot` function can be used to create four types of plots by specifying the *graphtype* argument. 
+
+<div class="warning" style='background-color:#ffd2c2; color: #000000; border-left: solid #db5f32 4px; border-radius: 4px; padding:0.7em;'>
+<span>
+<p style='margin-top:1em; text-align:center'>
+<b>Parameters for smoothing the temporal diversity patterns</b></p>
+<p style='margin-left:1em;'>
+
+- <span style="font-weight: bold;">graphtype:</span><br> The type of plot which is produced. There are four options. 
+      <br><br>
+  - <span style="font-weight: bold;">graphtype = "total":</span><br> An area chart showing the soundscape diversity by time-of-day for the entire frequency range.
+      <br><br>
+  - <span style="font-weight: bold;">graphtype = "frequency":</span><br> A stacked area chart showing the relative contribution of frequency bins with user-defined width to the total soundscape diversity by time-of-day.
+      <br><br>
+  - <span style="font-weight: bold;">graphtype = "normfreq":</span><br> A percentage stacked area chart showing the normalized relative contribution of frequency bins with user-defined width to the soundscape diversity by time-of-day.
+      <br><br>
+  - <span style="font-weight: bold;">graphtype = "linefreq":</span><br> A line chart showing the relative contribution of frequency bins with user-defined width to the soundscape diversity by time-of-day.
+
+</p>
+</span>
+</div>
+
+    
+Let's have a look at these plotting options one by one. 
+
+#### 2.3.1. The `ss_diversity_plot` function with *graphtype = "total"*
+
+**Let's start by producing a plot showing the temporal patterns in the soundscape richness using the** ***graphtype = "total"*** **option:**
+
+```{r}
+
+# Temporal patterns in the soundscape richness
+
+ss_diversity_plot(soundscape_obj = soundscape_list[["Aline"]], 
+                  qvalue = 0, 
+                  graphtype = "total", 
+                  output = "percentage", 
+                  smooth = FALSE)
+
+
+```
+
+This type of plot shows the variation in the soundscape richness throughout a 24-hour period, similar to using the `ss_diversity` function with *subset = "tod"* (like we did before). As you can see, there is a general trend showing a higher soundscape richness during the night, and a lower soundscape richness during the day. Still, there is a lot of short-term variability that seems to obscure this pattern. Note that, in the command we used here, we specified an additional argument: *smooth = FALSE*. \
+\
+
+<div class="warning" style='background-color:#ffd2c2; color: #000000; border-left: solid #db5f32 4px; border-radius: 4px; padding:0.7em;'>
+<span>
+<p style='margin-top:1em; text-align:center'>
+<b>Parameters for smoothing the temporal diversity patterns</b></p>
+<p style='margin-left:1em;'>
+
+- <span style="font-weight: bold;">smooth:</span><br> One of either TRUE or FALSE. If set to TRUE, applies a moving average filter for smoothing the diversity by time-of-day.<br><br>
+
+- <span style="font-weight: bold;">movavg:</span><br> If smooth=TRUE, determines the width of the moving average filter. Consult movavg for more information.<br><br>
+
+</p>
+</span>
+</div>
+
+    
+We can use the *smooth* and *movavg* arguments to apply a smoothing function to the data. This will smoothen out short-term variability and make longer-term patterns more clear. 
+
+**Let's give this a shot. We will turn on the smoothing function using the *smooth* argument and specify how much smoothing will occur using three different *movavg* values:**
+
+```{r, fig.width=21, fig.height=7}
+
+# movavg = 6
+
+plot_1 <- ss_diversity_plot(soundscape_obj = soundscape_list[["Aline"]], 
+                  qvalue = 0, 
+                  graphtype = "total", 
+                  output = "percentage", 
+                  smooth = TRUE, 
+                  movavg = 6, 
+                  timeinterval = "4 hours") + 
+  
+  ggplot2::scale_y_continuous(limits = c(0, 50), 
+                              expand = c(0,0))
+
+# movavg = 12
+
+
+plot_2 <- ss_diversity_plot(soundscape_obj = soundscape_list[["Aline"]], 
+                  qvalue = 0, 
+                  graphtype = "total", 
+                  output = "percentage", 
+                  smooth = TRUE, 
+                  movavg = 12, 
+                  timeinterval = "4 hours")+ 
+  
+  ggplot2::scale_y_continuous(limits = c(0, 50), 
+                              expand = c(0,0))
+
+
+# movavg = 24
+
+
+plot_3 <- ss_diversity_plot(soundscape_obj = soundscape_list[["Aline"]], 
+                  qvalue = 0, 
+                  graphtype = "total", 
+                  output = "percentage", 
+                  smooth = TRUE, 
+                  movavg = 24, 
+                  timeinterval = "4 hours")+ 
+  
+  ggplot2::scale_y_continuous(limits = c(0, 50), 
+                              expand = c(0,0))
+
+# Combine plots 
+
+library(patchwork)
+
+plot_total <- plot_1 + plot_2 + plot_3
+
+plot_total
+
+```
+
+**Note:** As you can see, we added an additional *timeinterval* argument to format the x-axis to our liking. For a description on how to use this argument, please consult the `ss_heatmap` section above. 
+
+We can see that, as indicated before, the soundscape richness is high throughout the night and dawn period, and then drops steeply during the day. We can observe a slight peak just before and after mid-day. Finally, the soundscape richness starts increasing again after sunset (**remember:** you can see at what time sunset occurs for your soundscape by accessing the metadata contained in the soundscape object using soundscape_name@sunset).  
+
+Like before, using the `ss_diversity_plot` function, we can also subset the frequencies that are used to calculate the soundscape richness using the *minfreq* and *maxfreq* arguments (see before). 
+
+**Let's have a look at the temporal patterns in the soundscape richness for three different parts of the frequency spectrum (below 2,000 Hz, between 2,000-8,000 Hz and above 8,000 Hz)**
+
+```{r}
+
+  # Below 2,000 Hz
+
+plot_1 <- ss_diversity_plot(soundscape_obj = soundscape_list[["Aline"]], 
+                  qvalue = 0, 
+                  graphtype = "total", 
+                  output = "percentage", 
+                  smooth = TRUE, 
+                  movavg = 24,  
+                  maxfreq = 2000, 
+                  timeinterval = "4 hours")+ 
+  
+  ggplot2::scale_y_continuous(limits = c(0, 55), 
+                              expand = c(0,0))
+
+  # Between 2,000 - 8,000 Hz
+
+plot_2 <- ss_diversity_plot(soundscape_obj = soundscape_list[["Aline"]], 
+                  qvalue = 0, 
+                  graphtype = "total", 
+                  output = "percentage", 
+                  smooth = TRUE, 
+                  movavg = 24, 
+                  minfreq = 2000, 
+                  maxfreq = 8000, 
+                  timeinterval = "4 hours")+ 
+  
+  ggplot2::scale_y_continuous(limits = c(0, 55), 
+                              expand = c(0,0))
+
+# Above 8,000 Hz
+
+plot_3 <- ss_diversity_plot(soundscape_obj = soundscape_list[["Aline"]], 
+                  qvalue = 0, 
+                  graphtype = "total", 
+                  output = "percentage", 
+                  smooth = TRUE, 
+                  movavg =24, 
+                  minfreq = 8000, 
+                  timeinterval = "4 hours")+ 
+  
+  ggplot2::scale_y_continuous(limits = c(0, 55), 
+                              expand = c(0,0))
+
+# Combine the plots
+
+plot_total <- plot_1 + plot_2 + plot_3
+
+plot_total
+
+```
+
+Note that, even though our different frequency subsets have a different number of detectable OSUs (different width of frequency bins), we can directly compare the soundscape richness values by using *output = "percentage"*. We can see quite different temporal patterns emerge for the three parts of the frequency spectrum. Below 2,000 Hz, we find two drops in the soundscape richness: around sunrise (05:44 AM) and right after sunset (17:52 PM). We can also observe a peak in the vocal activity below 2,000 Hz just before midnight. The other two frequency bins under consideration (2,000-8,000 Hz and > 8,000 Hz) show the general pattern we observed earlier, with a higher soundscape richness in the night and lower richness in the day. Still, we can see that, overall, more sound is present between 2,000-8,000 Hz (soundscape richess = approx. 20-60%) compared to the frequency range above 8,000 Hz (soundscape richness = approx. 6-24%). Moreover, the soundscape richness between 2,000-8,000 Hz peaks around midnight, whereas the soundscape richness above 8,000 Hz peaks around dawn. 
+
+Clearly, this function is very useful for providing a visual representation of the variation in our soundscape metrics throughout the 24h period in which species can vocalize. Let's have a look at the next *graphtype* option. 
+
+#### 2.3.2. The `ss_diversity_plot` function with *graphtype = "frequency"*
+
+
+**Let's have a look at what the graphtype = "frequency" option does:**
+
+```{r}
+
+ss_diversity_plot(soundscape_obj = soundscape_list[["Aline"]], 
+                  qvalue = 0, 
+                  graphtype = "frequency", 
+                  output = "percentage", 
+                  smooth = TRUE, 
+                  movavg = 24, 
+                  maxfreq = 20000)
+
+
+```
+
+The *graphtype = "frequency"* option shows the variation in the soundscape richness throughout the day for a user-specified number of frequency bins. The function requires the same *freqseq* and *nbins* arguments we saw for the `ss_diversity` function (see earlier). For instance, here we can see that, around dawn, a wider variety of frequencies is present in the soundscape than during the other periods. 
+
+**Let's try this again, but use fewer frequency bins for better comparisons:**
+
+```{r}
+
+ss_diversity_plot(soundscape_obj = soundscape_list[["Aline"]], 
+                  qvalue = 0, 
+                  graphtype = "frequency", 
+                  output = "percentage", 
+                  smooth = TRUE, 
+                  movavg = 24, 
+                  maxfreq = 20000, 
+                  nbins = 5)
+
+```
+
+We can see patterns we established before: low frequencies peak just before midnight. Additionally, frequencies between approx. 8,000-12,000 Hz are more common at night and almost absent during the day. 
+
+
+Next up, let's have a look at the *graphtype = "normfreq"* option. 
+
+#### 2.3.3. The `ss_diversity_plot` function with *graphtype = "normfreq"*
+
+**Let's have a look at what the graphtype = "normfreq" option does:**
+
+```{r}
+
+ss_diversity_plot(soundscape_obj = soundscape_list[["Aline"]], 
+                  qvalue = 0, 
+                  graphtype = "normfreq", 
+                  output = "percentage", 
+                  smooth = TRUE, 
+                  movavg = 24, 
+                  maxfreq = 20000)
+
+```
+
+By setting the *graphtype = "normfreq"* option, we are producing a plot similar to the *graphtype = "frequency"* option. However, instead of showing the absolute contribution of frequency bins to the total soundscape richness value, here, we are showing the normalized contribution. This way, we can better see how the amount of active OSUs in each frequency bin changes throughout the day. 
+
+Finally, let's have a look at our final option: *graphtype = "linefreq"*. 
+
+#### 2.3.3. The `ss_diversity_plot` function with *graphtype = "linefreq"*
+
+**Let's have a look at what the graphtype = "linefreq" option does:**
+
+```{r, fig.width=35, fig.height=7}
+
+ss_diversity_plot(soundscape_obj = soundscape_list[["Aline"]], 
+                  qvalue = 0, 
+                  graphtype = "linefreq", 
+                  output = "percentage", 
+                  smooth = TRUE, 
+                  movavg = 24, 
+                  maxfreq = 20000, 
+                  nbins = 5)
+
+```
+
+The *graphtype = "linefreq"* option produces a graph similar to the *graphtype = "total" option, but allows the user to specify the number of bins in which to divide the frequency spectrum. Here, in one glance, we can explore the temporal patterns in the soundscape richness for different frequency bands. 
+
+
+
+
+
+
+
