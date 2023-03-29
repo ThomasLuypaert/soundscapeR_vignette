@@ -1657,3 +1657,66 @@ knitr::include_graphics("images/comparative_plot.png")
 
 ```
 
+Based on the differential heatmap produced by `ss_compare`, we can see that the OSU composition between Andre island and Mascote_A1 differs quite a bit. For instance, we can see that Mascote_A1 contains more sounds between 12,000-14,000 Hz at night time (redder values indicate OSUs were more common in *soundscape_obj_B*, or Mascote_A1). Additionally, Mascote_A1 clearly contains more sound in the daytime, showing three distinct bands at approx. 2,000 Hz, 6,000 Hz, and 8,000-10,000 Hz. Conversely, we can see that Andre island contains sound in places where little sound sound is present for Mascote_A1 (bluer values indicate OSUs were more common in *soundscape_obj_A*, or Andre island). For instance, the vertical peak around dawn is distinct in Andre, but not as clear is Mascote A1. Moreover, Andre contains some sounds between 3,000-4,000 Hz and 5,000-6,000 Hz at nighttime, which are not present for Mascote_A1. 
+
+Clearly, these differential heatmaps are a useful tool to quickly compare the OSU composition between two soundscapes. 
+
+### 3.2. The `ss_pcoa` function
+
+If we want to go beyond heatmaps, and assess how similar or different multiple soundscapes actually are from one another, we can use the `ss_pcoa` function. The `ss_pcoa` function can be used to create principle coordinate plots, using a dimensionality reduction approach on the OSU incidence data of multiple soundscapes to plot the distances between these soundscapes in a two-dimensional space. To do this, the function calculates the Bray-Curtis dissimilarities between the soundscapes. 
+
+Let's have a look at the mandatory arguments:
+
+<div class="warning" style='background-color:#ffd2c2; color: #000000; border-left: solid #db5f32 4px; border-radius: 4px; padding:0.7em;'>
+<span>
+<p style='margin-top:1em; text-align:center'>
+<b>Mandatory input parameters</b></p>
+<p style='margin-left:1em;'>
+
+- <span style="font-weight: bold;">soundscape_list:</span><br> A list of soundscape objects. Each object in the list should be produced using the \code{\link{ss_create}} function (or ss_index_merge, ss_binarize, and ss_aggregate in sequence).<br><br>
+
+</p>
+</span>
+</div>
+
+In it's most basic form, the `ss_pcoa` function takes a single argument: a list of soundscape object to compare. 
+
+**Let's have a look at what this looks like:**
+
+
+```{r}
+
+ss_pcoa(soundscape_list = soundscape_list)
+
+```
+
+Great, this already reveals a lot! Based on this principle coordinate plot, we can see that the first PCo explains 52.9% of the variation between the soundscapes, and separates the plots on Mascote island from the plots on Andre island - clearly these is a difference in the soundscapes between these two islands. We can also see that a second PCo explains 22.4% of the variation and separates out plot *Mascote_A2* from the other plots on Mascote island. 
+
+Now, let's have a look at the other plotting parameters:
+
+<div class="warning" style='background-color:#ffd2c2; color: #000000; border-left: solid #db5f32 4px; border-radius: 4px; padding:0.7em;'>
+<span>
+<p style='margin-top:1em; text-align:center'>
+<b>Optional input parameters</b></p>
+<p style='margin-left:1em;'>
+
+- <span style="font-weight: bold;">grouping:</span><br> A numeric or character vector indicating potential grouping of the elements in the 'soundscape_list' object. Make sure that the grouping vector has the same length as the 'soundscape_list' argument.<br><br>
+
+- <span style="font-weight: bold;">screeplot:</span><br> A boolean operator indicating whether the function should produce a screeplot in addition to the PCoA plot. Options are: TRUE and FALSE.<br><br>
+
+</p>
+</span>
+</div>
+
+
+**Let's start of by taking a look at the *grouping* argument:**
+
+```{r}
+
+ss_pcoa(soundscape_list = soundscape_list, 
+        grouping = c("Aline", rep("Mascote", 4)))
+
+```
+
+
+
