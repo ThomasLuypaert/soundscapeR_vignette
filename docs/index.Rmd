@@ -1377,7 +1377,7 @@ Let's have a look at these plotting options one by one.
 
 **Let's start by producing a plot showing the temporal patterns in the soundscape richness using the** ***graphtype = "total"*** **option:**
 
-```{r, dev='cairo_pdf'}
+```{r, dev='svg'}
 
 # Temporal patterns in the soundscape richness
 
@@ -1412,7 +1412,7 @@ We can use the *smooth* and *movavg* arguments to apply a smoothing function to 
 
 **Let's give this a shot. We will turn on the smoothing function using the *smooth* argument and specify how much smoothing will occur using three different *movavg* values:**
 
-```{r, fig.width=21, fig.height=7, dev='cairo_pdf'}
+```{r, fig.width=21, fig.height=7, dev='svg'}
 
 # movavg = 6
 
@@ -1474,7 +1474,7 @@ Like before, using the `ss_diversity_plot` function, we can also subset the freq
 
 **Let's have a look at the temporal patterns in the soundscape richness for three different parts of the frequency spectrum (below 2,000 Hz, between 2,000-8,000 Hz and above 8,000 Hz)**
 
-```{r, dev='cairo_pdf'}
+```{r, dev='svg'}
 
   # Below 2,000 Hz
 
@@ -1536,7 +1536,7 @@ Clearly, this function is very useful for providing a visual representation of t
 
 **Let's have a look at what the graphtype = "frequency" option does:**
 
-```{r, dev='cairo_pdf'}
+```{r, dev='svg'}
 
 ss_diversity_plot(soundscape_obj = soundscape_list[["Andre"]], 
                   qvalue = 0, 
@@ -1553,7 +1553,7 @@ The *graphtype = "frequency"* option shows the variation in the soundscape richn
 
 **Let's try this again, but use fewer frequency bins for better comparisons:**
 
-```{r,dev='cairo_pdf'}
+```{r,dev='svg'}
 
 ss_diversity_plot(soundscape_obj = soundscape_list[["Andre"]], 
                   qvalue = 0, 
@@ -1575,7 +1575,7 @@ Next up, let's have a look at the *graphtype = "normfreq"* option.
 
 **Let's have a look at what the graphtype = "normfreq" option does:**
 
-```{r, dev='cairo_pdf'}
+```{r, dev='svg'}
 
 ss_diversity_plot(soundscape_obj = soundscape_list[["Andre"]], 
                   qvalue = 0, 
@@ -1595,7 +1595,7 @@ Finally, let's have a look at our final option: *graphtype = "linefreq"*.
 
 **Let's have a look at what the graphtype = "linefreq" option does:**
 
-```{r, fig.width=35, fig.height=7, dev='cairo_pdf'}
+```{r, fig.width=35, fig.height=7, dev='svg'}
 
 ss_diversity_plot(soundscape_obj = soundscape_list[["Andre"]], 
                   qvalue = 0, 
