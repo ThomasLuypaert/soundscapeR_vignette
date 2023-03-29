@@ -1527,7 +1527,7 @@ plot_total
 
 ```
 
-Note that, even though our different frequency subsets have a different number of detectable OSUs (different width of frequency bins), we can directly compare the soundscape richness values by using *output = "percentage"*. We can see quite different temporal patterns emerge for the three parts of the frequency spectrum. Below 2,000 Hz, we find two drops in the soundscape richness: around sunrise (05:44 AM) and right after sunset (17:52 PM). We can also observe a peak in the vocal activity below 2,000 Hz just before midnight. The other two frequency bins under consideration (2,000-8,000 Hz and > 8,000 Hz) show the general pattern we observed earlier, with a higher soundscape richness in the night and lower richness in the day. Still, we can see that, overall, more sound is present between 2,000-8,000 Hz (soundscape richess = approx. 20-60%) compared to the frequency range above 8,000 Hz (soundscape richness = approx. 6-24%). Moreover, the soundscape richness between 2,000-8,000 Hz peaks around midnight, whereas the soundscape richness above 8,000 Hz peaks around dawn. 
+Note that, even though our different frequency subsets have a different number of detectable OSUs (different width of frequency bins), we can directly compare the soundscape richness values by using *output = "percentage"*. We can see quite different temporal patterns emerge for the three parts of the frequency spectrum. Below 2,000 Hz, we find a clear peak around dawn, and several moment where sound is completely absent. The other two frequency bins under consideration (2,000-8,000 Hz and > 8,000 Hz) show the general pattern we observed earlier, with a higher soundscape richness in the night, a peak at dawn, and a lower richness in the day. Still, we can see that, overall, more sound is present between 2,000-8,000 Hz (max soundscape richness = > 50%) compared to the frequency range above 8,000 Hz (max soundscape richness = < 30%). 
 
 Clearly, this function is very useful for providing a visual representation of the variation in our soundscape metrics throughout the 24h period in which species can vocalize. Let's have a look at the next *graphtype* option. 
 
@@ -1566,7 +1566,7 @@ ss_diversity_plot(soundscape_obj = soundscape_list[["Andre"]],
 
 ```
 
-We can see patterns we established before: low frequencies peak just before midnight. Additionally, frequencies between approx. 8,000-12,000 Hz are more common at night and almost absent during the day. 
+We can see patterns we established before: low frequencies peak around dawn. Additionally, frequencies between approx. 8,000-12,000 Hz are more common at night and almost absent during the day. 
 
 
 Next up, let's have a look at the *graphtype = "normfreq"* option. 
