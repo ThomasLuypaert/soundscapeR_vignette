@@ -296,7 +296,7 @@ Now that we know which input parameters to provide, let's give this a try. We wi
 
 **Let's run the `ss_create` function:**
 
-```{r, results='hide'}
+```{r, results='hide', cache=TRUE}
 
 soundscape_list <- 
   
@@ -582,7 +582,7 @@ In it's most basic form, the `ss_heatmap` function only takes a single argument.
 
 **In practice, the code looks as follows:**
 
-```{r, fig.height= 7, fig.width= 7, warning=FALSE, error=FALSE, comment=FALSE}
+```{r, fig.height= 7, fig.width= 7, warning=FALSE, error=FALSE, comment=FALSE, cache=TRUE}
 
 ss_heatmap(soundscape_obj = soundscape_list[["Andre"]])
 
@@ -646,7 +646,7 @@ Next up, let's have a look at how we can add some ecologically important varible
 
 **Let's try this out for the regular and polar heatmap:**
 
-```{r, eval=FALSE}
+```{r, eval=FALSE, cache=TRUE}
 
 # Regular heatmap
 
@@ -703,7 +703,7 @@ The `ss_heatmap` function also contains parameters to change the aesthetics of t
 
 **Let's try this out for the Andre island soundscape using a regular heatmap with a 4 hour x-axis interval and 1000 Hz y-axis interval:**
 
-```{r, fig.height=7, fig.width=7}
+```{r, fig.height=7, fig.width=7, cache=TRUE}
 
 ss_heatmap(soundscape_obj = soundscape_list[["Andre"]],
            timeinterval = "4 hours", 
@@ -740,7 +740,7 @@ If we are only interested the a subset of the acoustic trait space, the `ss_heat
 
 **Let's try visualizing the Andre island soundscape between 06:00h and 18:00h for frequencies between 0 - 11,000 Hz:**
 
-```{r, fig.height=7, fig.width=7}
+```{r, fig.height=7, fig.width=7, cache=TRUE}
 
 ss_heatmap(soundscape_obj = soundscape_list[["Andre"]],
            mintime = "06:00:00", 
@@ -775,7 +775,7 @@ We can also alter the color aesthetics that are mapped to the OSU relative abund
 
 **We can try to see what these do by adding them in one by one. Up first is the palette option. Let's try them all on Andre island's soundscape:**
 
-```{r, fig.width=21, fig.height=14}
+```{r, fig.width=21, fig.height=14, cache=TRUE}
 
 # Try the palettes one by one
 
@@ -818,7 +818,7 @@ With the **palette** option, we can choose which of the *viridis* color palettes
 
 **Great, now let's test the direction variable for the "magma" color palette:**
 
-```{r, fig.width=14, fig.height=7}
+```{r, fig.width=14, fig.height=7, cache=TRUE}
 
 # Try the direction options
 
@@ -850,7 +850,7 @@ The **direction** argument can be used to inverse the color scales of the viridi
 
 **Finally, let's see what the zero.black variable does for the regular 'viridis' palette:**
 
-```{r, fig.width=14, fig.height=7}
+```{r, fig.width=14, fig.height=7, cache=TRUE}
 
 # Try the direction options
 
@@ -900,7 +900,7 @@ The `ss_heatmap` function can also be used to make interactive heatmaps.
 
 **Let's make an interactive regular annotated heatmap for Andre island's soundscape:**
 
-```{r, comment= FALSE, error=FALSE, message=FALSE, warning=FALSE, echo=FALSE}
+```{r, comment= FALSE, error=FALSE, message=FALSE, warning=FALSE, echo=FALSE, cache=TRUE}
 
 ss_heatmap(soundscape_obj = soundscape_list[["Andre"]],
            type = "regular", 
@@ -970,7 +970,7 @@ For an overview of the benefits of Hill numbers over conventional diversity indi
 
 - <span style="font-weight: bold;">1. They abide by the replication principle:</span><br> If two equally diverse but completely distinct assemblages (no species in common, but an identical relative abundance distribution) are grouped, the diversity metric should double. This is true for Hill numbers, but not true for entropy based indices such as the Shannon and Simpson indices.<br><br>
 
-- <span style="font-weight: bold;">2. They are expressed in the 'effective number of species/units':</span><br>  The 'Effective Number of Species' (ENS) represents the number of equally common species or diversity units required to give a particular diversity index value. But why should we convert our index values to the ENS? Converting indices to their true diversities (ENS) gives them a set of common behaviors and properties. In this way, different indices can be more easily compared. For instance, this conversion deals with the non-linearity the troubles most classical diversity indices. The linear scaling provided ENS allows true comparison of diversities - if one community has diversity 5 (ENS), and the second community has diversity 15 (ENS), we can truly say the second community is three times as diverse as the first community. We could not say this with non-linear diversity indices, such as the Simpson and Shannon indices.  Point 1 and 2 both relate to the linear scaling of diversity indices with the underlying diversity of the ecological community. For an overview of how Hill numbers scale linearly with the underlying diversity, but the Shannon and Simpson indices do not, visit [this](https://jonlefcheck.net/2012/10/23/diversity-as-effective-numbers/) website.<br><br>
+- <span style="font-weight: bold;">2. They are expressed in the 'effective number of species/units':</span><br>  The 'Effective Number of Species' (ENS) represents the number of equally abundant species or diversity units required to give a particular diversity index value. But why should we convert our index values to the ENS? Converting indices to their true diversities (ENS) gives them a set of common behaviors and properties. In this way, different indices can be more easily compared. For instance, this conversion deals with the non-linearity that troubles most classical diversity indices. The linear scaling provided by ENS allows the true comparison of diversities - if one community has diversity 5 (ENS), and the second community has diversity 15 (ENS), we can truly say the second community is three times as diverse as the first community. We could not say this with non-linear diversity indices, such as the Simpson and Shannon indices.  Point 1 and 2 both relate to the linear scaling of diversity indices with the underlying diversity of the ecological community. For an overview of how Hill numbers scale linearly with the underlying diversity, but the Shannon and Simpson indices do not, visit [this](https://jonlefcheck.net/2012/10/23/diversity-as-effective-numbers/) website.<br><br>
 
 - <span style="font-weight: bold;">3. Some of the most commonly used diversity indices in literature can be converted into Hill numbers using simple transformations</span><br><br>
 
@@ -1611,8 +1611,49 @@ ss_diversity_plot(soundscape_obj = soundscape_list[["Andre"]],
 The *graphtype = "linefreq"* option produces a graph similar to the *graphtype = "total" option, but allows the user to specify the number of bins in which to divide the frequency spectrum. Here, in one glance, we can explore the temporal patterns in the soundscape richness for different frequency bands. 
 
 
+## Phase III: Comparing multiple soundscapes
 
+In addition to containing functions to assess the diversity patterns of a single soundscape, the `soundscapeR` package also contains a range of functions to explore and contrast the diversity patterns between multiple soundscapes. These include functions for visualizing the differences in OSU presence and relative abundance between two soundscapes (`ss_compare`), functions that perform dimensionality reduction to plot the Bray-Curtis dissimilarity between soundscapes in a two-dimensional space (`ss_pcoa`), functions for decomposing the soundscape diversity of a study area into its alpha, beta and gamma components (`ss_divpart`), and functions to compute the pairwise diversity and dissimilarity values between the soundscapes in the system (`ss_pairdis`). \
 
+We will go deeper into each of these functions in the following section.
 
+### 3.1. The `ss_compare` function
 
+The `ss_compare` function works in a very similar way to the `ss_heatmap` function and requires many of the same arguments. However, instead of portraying the presence and relative abundance of OSUs for a single soundscape, the `ss_compare` function is used to contrast OSUs between two soundscapes. To do so, the function creates a differential heatmap that visually illustrates the differences between two soundscapes. 
+
+Like the `ss_heatmap` function, `ss_compare` offers the option to subset the soundscape by specific time or frequency coordinates, portray the soundscape in either Cartesian or polar coordinates, and more. 
+
+Let's have a look at the mandatory input argument. 
+
+<div class="warning" style='background-color:#ffd2c2; color: #000000; border-left: solid #db5f32 4px; border-radius: 4px; padding:0.7em;'>
+<span>
+<p style='margin-top:1em; text-align:center'>
+<b>Mandatory input parameters</b></p>
+<p style='margin-left:1em;'>
+
+- <span style="font-weight: bold;">soundscape_obj_A:</span><br> A soundscape object produced by the ss_create function (or ss_index_merge, ss_binarize, and ss_aggregate in sequence). This will be the first soundscape for comparison.<br><br>
+
+- <span style="font-weight: bold;">soundscape_obj_B:</span><br> A soundscape object produced by the ss_create function (or ss_index_merge, ss_binarize, and ss_aggregate in sequence). This will be the second soundscape for comparison.<br><br>
+
+</p>
+</span>
+</div>
+
+The remaining arguments are the same as `ss_heatmap`, except for the annotate argument, which cannot be specified. This is because, when contrasting two different soundscapes, the sunrise and sunset times may differ. 
+
+**Let's have a look at how this works by comparing the soundscape of 'Andre' and 'Mascote_A1':**
+
+```{r, width = 30, height = 10, cache=TRUE, eval=FALSE}
+
+soundscapeR::ss_compare(soundscape_obj_A = soundscape_list[["Andre"]],
+                        soundscape_obj_B = soundscape_list[["Mascote_A1"]], 
+                        maxfreq = 20000)
+
+```
+
+```{r comparative_plot, out.width = '100%', echo=FALSE}
+
+knitr::include_graphics("images/comparative_plot.png")
+
+```
 
