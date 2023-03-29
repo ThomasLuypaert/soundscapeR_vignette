@@ -1240,7 +1240,7 @@ ss_diversity(soundscape_obj = soundscape_list[["Andre"]],
 
 As you can see, by changing the time of dawn and dusk, we get slightly different soundscape richness values. It is important to consider what period of dawn/dusk is ecologically meaningful for your study system. 
 
-**Finally, we can also use the *subset* argument to calculate the soundscape metrics for each unique time of day for which we collected sound files. Let's do this for the soundscape ricnhness:**
+**Finally, we can also use the *subset* argument to calculate the soundscape metrics for each unique time of day for which we collected sound files. Let's do this for the soundscape richness:**
 
 ```{r}
 
@@ -1254,7 +1254,7 @@ head(ss_diversity(soundscape_obj = soundscape_list[["Andre"]],
 
 ```
 
-We get 288 soundscape richness values (24 values shown here), one for each unique time at which we collected sound during our recording period. This can reveal patterns in the soundscape richness throughout the day. We can also use this sort of information to detect unusual times of sonic activity. For instance, here, we see there is a peak in the soundscape richness at 04:55 in the morning, when the whole soundscape is saturated (soundscape richness = 100%). This might be caused by some sort of loud geophysical event (*e.g.* rain) that saturated the recording with sound at every frequency. Indeed, when we look at the heatmap we produced earlier, we can see a vertical line across the frequency spectrum at around this time. 
+We get 288 soundscape richness values (24 values shown here), one for each unique time at which we collected sound during our recording period. This can reveal patterns in the soundscape richness throughout the day. 
 
 **Aside from the *subset* argument, we can also perform temporal subsetting of the soundscape using custom time limits by using the *mintime* and *maxtime* arguments. Let's try this out by calculating the soundscape richness between 11:00 and 13:00:**
 
@@ -1337,7 +1337,7 @@ ss_diversity(soundscape_obj = soundscape_list[["Andre"]],
 
 ```
 
-We can see that, above 11,000 Hz, the soundscape richness values drop steeply. Indeed, this is confirmed by the visual exploration of our heatmap we produced earlier, where we saw practically no sound above this frequency cut-off. 
+We can see that, above 12,000 Hz, the soundscape richness values drop steeply. Indeed, this is confirmed by the visual exploration of our heatmap we produced earlier, where we saw practically no sound above this frequency cut-off. 
 
 
 Clearly the `ss_diversity` and `ss_evenness` functions are highly flexible, allowing the user to tease apart when and where sound is present for a soundscape of interest. Yet, although this is certainly useful, it can be hard to get a grasp of the patterns at hand with so many subsetting options. This is where the `ss_diversity_plot` function comes in, producing a range of different visualization options that allow for an easier assessment of temporal and frequency patterns in the soundscape metrics. 
@@ -1377,7 +1377,7 @@ Let's have a look at these plotting options one by one.
 
 **Let's start by producing a plot showing the temporal patterns in the soundscape richness using the** ***graphtype = "total"*** **option:**
 
-```{r}
+```{r, dev='cairo_pdf'}
 
 # Temporal patterns in the soundscape richness
 
@@ -1390,7 +1390,7 @@ ss_diversity_plot(soundscape_obj = soundscape_list[["Andre"]],
 
 ```
 
-This type of plot shows the variation in the soundscape richness throughout a 24-hour period, similar to using the `ss_diversity` function with *subset = "tod"* (like we did before). As you can see, there is a general trend showing a higher soundscape richness during the night, and a lower soundscape richness during the day. Still, there is a lot of short-term variability that seems to obscure this pattern. Note that, in the command we used here, we specified an additional argument: *smooth = FALSE*. \
+This type of plot shows the variation in the soundscape richness throughout a 24-hour period, similar to using the `ss_diversity` function with *subset = "tod"* (like we did before). As you can see, there is a general trend showing a higher soundscape richness during the night, and a lower soundscape richness during the day. Moreover, there is a clear peak in the soundscape richness around dawn. Still, there is a lot of short-term variability that seems to obscure this pattern. Note that, in the command we used here, we specified an additional argument: *smooth = FALSE*. \
 \
 
 <div class="warning" style='background-color:#ffd2c2; color: #000000; border-left: solid #db5f32 4px; border-radius: 4px; padding:0.7em;'>
@@ -1412,7 +1412,7 @@ We can use the *smooth* and *movavg* arguments to apply a smoothing function to 
 
 **Let's give this a shot. We will turn on the smoothing function using the *smooth* argument and specify how much smoothing will occur using three different *movavg* values:**
 
-```{r, fig.width=21, fig.height=7}
+```{r, fig.width=21, fig.height=7, dev='cairo_pdf'}
 
 # movavg = 6
 
@@ -1468,13 +1468,13 @@ plot_total
 
 **Note:** As you can see, we added an additional *timeinterval* argument to format the x-axis to our liking. For a description on how to use this argument, please consult the `ss_heatmap` section above. 
 
-We can see that, as indicated before, the soundscape richness is high throughout the night and dawn period, and then drops steeply during the day. We can observe a slight peak just before and after mid-day. Finally, the soundscape richness starts increasing again after sunset (**remember:** you can see at what time sunset occurs for your soundscape by accessing the metadata contained in the soundscape object using soundscape_name@sunset).  
+We can see that, as indicated before, the soundscape richness is high throughout the night and dawn period, and then drops steeply during the day. We can observe a slight peak just around mid-day. Finally, the soundscape richness starts increasing again after sunset (**remember:** you can see at what time sunset occurs for your soundscape by accessing the metadata contained in the soundscape object using soundscape_name@sunset).  
 
 Like before, using the `ss_diversity_plot` function, we can also subset the frequencies that are used to calculate the soundscape richness using the *minfreq* and *maxfreq* arguments (see before). 
 
 **Let's have a look at the temporal patterns in the soundscape richness for three different parts of the frequency spectrum (below 2,000 Hz, between 2,000-8,000 Hz and above 8,000 Hz)**
 
-```{r}
+```{r, dev='cairo_pdf'}
 
   # Below 2,000 Hz
 
@@ -1536,7 +1536,7 @@ Clearly, this function is very useful for providing a visual representation of t
 
 **Let's have a look at what the graphtype = "frequency" option does:**
 
-```{r}
+```{r, dev='cairo_pdf'}
 
 ss_diversity_plot(soundscape_obj = soundscape_list[["Andre"]], 
                   qvalue = 0, 
@@ -1553,7 +1553,7 @@ The *graphtype = "frequency"* option shows the variation in the soundscape richn
 
 **Let's try this again, but use fewer frequency bins for better comparisons:**
 
-```{r}
+```{r,dev='cairo_pdf'}
 
 ss_diversity_plot(soundscape_obj = soundscape_list[["Andre"]], 
                   qvalue = 0, 
@@ -1575,7 +1575,7 @@ Next up, let's have a look at the *graphtype = "normfreq"* option.
 
 **Let's have a look at what the graphtype = "normfreq" option does:**
 
-```{r}
+```{r, dev='cairo_pdf'}
 
 ss_diversity_plot(soundscape_obj = soundscape_list[["Andre"]], 
                   qvalue = 0, 
@@ -1595,7 +1595,7 @@ Finally, let's have a look at our final option: *graphtype = "linefreq"*.
 
 **Let's have a look at what the graphtype = "linefreq" option does:**
 
-```{r, fig.width=35, fig.height=7}
+```{r, fig.width=35, fig.height=7, dev='cairo_pdf'}
 
 ss_diversity_plot(soundscape_obj = soundscape_list[["Andre"]], 
                   qvalue = 0, 
