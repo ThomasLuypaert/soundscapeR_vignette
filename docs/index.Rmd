@@ -122,7 +122,7 @@ knitr::include_graphics("images/Plot_1_soundscapeR_workflow.png")
 -   **Phase 2:** Explore the diversity of a single soundscape using the `ss_heatmap`, `ss_diversity`, `ss_evenness`, and `ss_diversity_plot` functions\
     \
     
--   **Step 3:** Compare the diversity of multiple soundscapes using the `ss_compare`, `ss_pcoa`, `ss_divpart`, and `ss_pairdis` functions\
+-   **Phase 3:** Compare the diversity of multiple soundscapes using the `ss_compare`, `ss_pcoa`, `ss_divpart`, and `ss_pairdis` functions\
     \
 
 
@@ -1608,7 +1608,7 @@ ss_diversity_plot(soundscape_obj = soundscape_list[["Andre"]],
 
 ```
 
-The *graphtype = "linefreq"* option produces a graph similar to the *graphtype = "total" option, but allows the user to specify the number of bins in which to divide the frequency spectrum. Here, in one glance, we can explore the temporal patterns in the soundscape richness for different frequency bands. 
+The *graphtype = "linefreq"* option produces a graph similar to the *graphtype = "total"* option, but allows the user to specify the number of bins in which to divide the frequency spectrum. Here, in one glance, we can explore the temporal patterns in the soundscape richness for different frequency bands. 
 
 
 ## Phase III: Comparing multiple soundscapes
@@ -1717,6 +1717,155 @@ ss_pcoa(soundscape_list = soundscape_list,
         grouping = c("Aline", rep("Mascote", 4)))
 
 ```
+
+The *grouping* argument is used to indicate which soundscapes in the *soundscape_list* argument belong together, and colors them accordingly. This is already a little clearer than the previous plot. 
+
+**Next, let's take a look at the *screeplot* argument:**
+
+```{r, fig.width=16, fig.height=8}
+
+ss_pcoa(soundscape_list = soundscape_list, 
+        grouping = c("Aline", rep("Mascote", 4)), 
+        screeplot = TRUE)
+
+```
+
+When we indicate *screeplot = TRUE*, the `ss_pcoa` function produces a second plot showing the cumulative percentage of the total variation that is explained as additional PCo's are added. We can see that, at 4 PCo's, all the variation between soundscapes is captured. 
+
+
+### 3.3. The `ss_divpart` function
+
+In addition to quantifying the soundscape richness, diversity, and evenness components, the workflow proposed in this manuscript can be used to decompose the regional metacommunity diversity (γ-diversity) into its local diversities (α-diversity) and a community turnover component (β-diversity). 
+
+**To do this, we use the following multiplicative framework provided by Hill numbers:**
+
+```{r, out.width= "100%", echo=FALSE}
+
+knitr::include_graphics("images/Hill_equations.PNG")
+
+```
+
+Here, *N* refers to the total number of sub-systems (soundscapes), *j* refers to each individual sub-system, and *wj* represents the relative weight given to each sub-system in the system. If all soundscapes are weighted equally, *wj* equals *1/N*. The alpha diversity is the Hill number of the averaged basic sums of the soundscapes (Eqn. 2). The gamma diversity is computed by taking the average of the relative abundance of each OSU across the soundscapes in the system and calculating the Hill number of the pooled system (Eqn. 3). The beta diversity captures the degree of heterogeneity in the OSU composition across sites (Eqn. 4). It ranges from 1 to *N* and
+quantifies the relationship between the regional and local diversity, that is, how many times more diverse is the whole system in the effective number of OSUs compared to the sub-systems on average. The beta diversity can also be seen as the effective number of completely distinct soundscapes in the
+system. 
+
+Now that we know the theory, let's take a look at how we can do this in practice. In its most basic form, the `ss_divpart` function takes the following arguments: 
+
+<div class="warning" style='background-color:#ffd2c2; color: #000000; border-left: solid #db5f32 4px; border-radius: 4px; padding:0.7em;'>
+<span>
+<p style='margin-top:1em; text-align:center'>
+<b>Function input parameters</b></p>
+<p style='margin-left:1em;'>
+
+- <span style="font-weight: bold;">soundscape_list:</span><br> A list of soundscape objects of equal dimensions, each soundscape object being produced by ss_create (or ss_index_merge, ss_binarize and ss_aggregate in sequence)<br><br>
+
+- <span style="font-weight: bold;">qvalue:</span><br> A positive integer or decimal number (>=0), most commonly between 0-3. This parameter modulates the sensitivity of diversity values to the relative abundance of Operational Sound Units (OSUs). A value of 0 corresponds to the richness, a value of 1 is the equivalent number of effective OSUs for the Shannon index, a value of 2 is the equivalent number of effective OSUs for the Simpson index.<br><br>
+
+</p>
+</span>
+</div>
+
+Now, we can use our island system to see how the overall system soundscape diversity (gamma) differs from the local soundscape diversity (alpha), and what the soundscape turnover (beta diversity) looks like. 
+
+**Let's try the code to decompose the soundscape richness into its various components:**
+
+```{r}
+
+ss_divpart(soundscape_list = soundscape_list,
+           qvalue = 0)
+
+
+
+```
+
+We can see that the system's alpha soundscape richness is 31.4%, the average richness of the local soundscape. However, overall, the consolidated soundscape richness of the system (gamma richness) is 57.2% - almost twice as high. A lower alpha richness at each location, but higher gamma richness when taking all locations together, suggests there might be some OSU turnover going on between our soundscapes - they are not identical. Indeed, this is confirmed by the soundscape turnover (beta), which is 1.82. In theory, this value can range from 1 (all soundscapes completely identical) to 5 (all soundscapes completely distinct). Our value here suggests that there is low to moderate turnover in the OSU composition between the soundscapes in our system. 
+
+But not all soundscapes in our study system are equal - some are more similar to others. For example, we have four soundscapes from Mascote island, but only one soundscape from Aline island. We can incorporate this 'grouping' or 'hierarchical structure' into our our diversity partitioning calculations. 
+
+**Let's have a look at the next argument of the `ss_divpart` function:**
+
+<div class="warning" style='background-color:#ffd2c2; color: #000000; border-left: solid #db5f32 4px; border-radius: 4px; padding:0.7em;'>
+<span>
+<p style='margin-top:1em; text-align:center'>
+<b>Function input parameters</b></p>
+<p style='margin-left:1em;'>
+
+- <span style="font-weight: bold;">hier_table:</span><br> A matrix indicating the relationship between the soundscapes in the soundscape_list. The first column lists the names of all the soundscapes in the soundscape_list, other columns can be used to group soundscapes into higher hierarchical levels. If no hierarchy table is supplied, the function defaults to a 2-level diversity partitioning.<br><br>
+
+</p>
+</span>
+</div>
+
+As we can see, we can supply the `ss_divpart` function with a table indicating the hierarchy between samples.
+
+**Let's give this a try:**
+
+```{r, cache=TRUE}
+
+hierarchy_table <- as.matrix(
+  data.frame(Sample = c("Andre", "Mascote_A1", "Mascote_A2", "Mascote_B1", "Mascote_B2"), 
+             grouping_1 = c("Andre", "Mascote", "Mascote", "Mascote", "Mascote")))
+
+ss_divpart(soundscape_list = soundscape_list, 
+           qvalue = 0, 
+           hier_table = hierarchy_table)
+
+
+```
+
+As you can see, by defining the hierarchical relationships between the plots on our islands, the output has changed a little. We now obtain two alpha richness values, one calculated at the sample (or plot) level, and one calculated at the level of the grouping we specified (islands). 
+
+We also get two soundscape turnover values (beta), one for each grouping level: 
+
+1. β1 = γ-islands (35.5%) / α-plots (31.4%) = 1.13
+2. β2 = γ-total (57.2%) / α-islands (35.5%) = 1.61
+
+By using the *hier_table* argument, we can further decompose the soundscape metrics based on the hierarchical relationship between samples (plots). 
+
+Yet, because beta diversity ranges between 1-N, it is not independent of the number of soundscapes in the system, and can thus not be used as a measure of similarity directly. Instead, to compare the relative compositional difference between soundscapes across multiple systems
+with a different number of soundscapes, some simple transformations can be performed on the beta diversity to
+remove the dependence on the number of soundscapes. To do this, we will use the next function. 
+
+**Note:** We can also partition the soundscape metrics using subsets of the soundscapes using the *minfreq*, *maxfreq*, *mintime* and *maxtime* arguments we've seen before. 
+
+### 3.4. The `ss_pairdis` function
+
+
+The framework of Hill numbers also allows us to define several measures of similarity between soundscapes in the wider system. Let's take a look at how these are calculated: 
+
+```{r, out.width= "100%", echo=FALSE}
+
+knitr::include_graphics("images/pairwise_dissimilarity.PNG")
+
+```
+
+Equations (5) and (6) are measures of overlap between soundscapes. The local or **Sørensen-type overlap** (*CqN*) quantifies the effective average proportion of a soundscape’s OSUs which are shared across all soundscapes. It captures the overlap between soundscapes from the sub-system’s perspective. For *N* soundscapes each having *S* equally common OSUs and sharing *A* OSUs between them, this function reduces to *CqN=A/S*. The regional or **Jaccard-type overlap**(*UqN*) quantifies the effective proportion of shared OSUs in a pooled assemblage of soundscapes, and thus captures the overlap between soundscapes from a regional perspective. Assume *N* soundscapes in a region with *S* unique and equally abundant OSUs. Here, *R* OSUs are shared between all soundscapes and the remaining OSUs (*S-R*) are distributed evenly among *N* soundscapes. In this scenario, Eqn. 8 reduces to *UqN = R/S*. 
+
+Equations (7) and (8) are measures of turnover in OSUs between soundscapes. The local or **Sørensen-type turnover complement** (*VqN*) quantifies the normalised OSU turnover rate with respect to the average soundscape. It measures the proportion of a typical soundscape which changes as one goes from one soundscape to the next. The regional or **Jaccard-type turnover complement** (*SqN*) quantifies the proportion of the regional soundscape diversity contained in the average assemblage and is a measure of regional homogeneity. 
+
+For all of the aforementioned similarity indices, the `ss_pairdis` function transforms the values into metrics of dissimilarity by taking their one-complement (*e.g.* 1 – XqN). Unlike the beta soundscape turnover, these dissimilarity indices range from 0-1, where 0 means the soundscapes are completely identical, and 1 indicates the soundscapes are completely unique. 
+
+If you want to learn more about the computation of similarity metrics using the framework of Hill numbers, have a look at the [hilldiv GitHub tutorial here](https://github.com/anttonalberdi/CLIMBATS_school_2020/blob/master/diversity_hillnumbers/4-Diversity_partitioning_and_dissimilarity_measurement.md) and [this paper](https://onlinelibrary.wiley.com/doi/full/10.1111/1755-0998.13014?casa_token=HSzss2ta-x8AAAAA%3Agx1wipMPwbFvb8pc6dy7W7vZxxDMi63_2jIKHYUH_5qPC1xYqKNbrQq3leGv1XEqnsFUhqgAPB0t4ihV). 
+
+To use the `ss_pairdis` function, we need to supply the same parameters as the `ss_divpart` function: *soundscape_list*, *qvalue* and *hier_table* (optional). 
+
+**Let's have a look:**
+
+```{r, cache=TRUE}
+
+ss_pairdis(soundscape_list = soundscape_list, 
+           qvalue = 0)
+
+
+```
+
+
+Indeed, based on this output, we can see that the pairwise dissimilarity between the plots in our case study is greatest between the soundscape of *Andre* island and all other plots. Furthermore, within Mascote island, we can see that plot Mascote_A2 is most dissimilar from the other plots on the island - a pattern which we previously observed used the `ss_pcoa` function. 
+
+
+
+
+
 
 
 

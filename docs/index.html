@@ -420,7 +420,7 @@ soundscape using the <code>ss_heatmap</code>, <code>ss_diversity</code>,
 functions<br />
 <br />
 </p></li>
-<li><p><strong>Step 3:</strong> Compare the diversity of multiple
+<li><p><strong>Phase 3:</strong> Compare the diversity of multiple
 soundscapes using the <code>ss_compare</code>, <code>ss_pcoa</code>,
 <code>ss_divpart</code>, and <code>ss_pairdis</code> functions<br />
 <br />
@@ -2424,10 +2424,10 @@ class="sourceCode r"><code class="sourceCode r"><span id="cb143-1"><a href="#cb1
 <span id="cb143-8"><a href="#cb143-8" aria-hidden="true" tabindex="-1"></a>                  <span class="at">nbins =</span> <span class="dv">5</span>)</span></code></pre></div>
 <p><img src="index_files/figure-html/unnamed-chunk-44-1.svg" width="3360" /></p>
 <p>The <em>graphtype = “linefreq”</em> option produces a graph similar
-to the *graphtype = “total” option, but allows the user to specify the
-number of bins in which to divide the frequency spectrum. Here, in one
-glance, we can explore the temporal patterns in the soundscape richness
-for different frequency bands.</p>
+to the <em>graphtype = “total”</em> option, but allows the user to
+specify the number of bins in which to divide the frequency spectrum.
+Here, in one glance, we can explore the temporal patterns in the
+soundscape richness for different frequency bands.</p>
 </div>
 </div>
 </div>
@@ -2578,6 +2578,260 @@ argument:</strong></p>
 class="sourceCode r"><code class="sourceCode r"><span id="cb146-1"><a href="#cb146-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ss_pcoa</span>(<span class="at">soundscape_list =</span> soundscape_list, </span>
 <span id="cb146-2"><a href="#cb146-2" aria-hidden="true" tabindex="-1"></a>        <span class="at">grouping =</span> <span class="fu">c</span>(<span class="st">&quot;Aline&quot;</span>, <span class="fu">rep</span>(<span class="st">&quot;Mascote&quot;</span>, <span class="dv">4</span>)))</span></code></pre></div>
 <p><img src="index_files/figure-html/unnamed-chunk-47-1.png" width="768" /></p>
+<p>The <em>grouping</em> argument is used to indicate which soundscapes
+in the <em>soundscape_list</em> argument belong together, and colors
+them accordingly. This is already a little clearer than the previous
+plot.</p>
+<p><strong>Next, let’s take a look at the <em>screeplot</em>
+argument:</strong></p>
+<div class="sourceCode" id="cb147"><pre
+class="sourceCode r"><code class="sourceCode r"><span id="cb147-1"><a href="#cb147-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ss_pcoa</span>(<span class="at">soundscape_list =</span> soundscape_list, </span>
+<span id="cb147-2"><a href="#cb147-2" aria-hidden="true" tabindex="-1"></a>        <span class="at">grouping =</span> <span class="fu">c</span>(<span class="st">&quot;Aline&quot;</span>, <span class="fu">rep</span>(<span class="st">&quot;Mascote&quot;</span>, <span class="dv">4</span>)), </span>
+<span id="cb147-3"><a href="#cb147-3" aria-hidden="true" tabindex="-1"></a>        <span class="at">screeplot =</span> <span class="cn">TRUE</span>)</span></code></pre></div>
+<p><img src="index_files/figure-html/unnamed-chunk-48-1.png" width="1536" /></p>
+<p>When we indicate <em>screeplot = TRUE</em>, the <code>ss_pcoa</code>
+function produces a second plot showing the cumulative percentage of the
+total variation that is explained as additional PCo’s are added. We can
+see that, at 4 PCo’s, all the variation between soundscapes is
+captured.</p>
+</div>
+<div id="the-ss_divpart-function" class="section level3">
+<h3>3.3. The <code>ss_divpart</code> function</h3>
+<p>In addition to quantifying the soundscape richness, diversity, and
+evenness components, the workflow proposed in this manuscript can be
+used to decompose the regional metacommunity diversity (γ-diversity)
+into its local diversities (α-diversity) and a community turnover
+component (β-diversity).</p>
+<p><strong>To do this, we use the following multiplicative framework
+provided by Hill numbers:</strong></p>
+<p><img src="images/Hill_equations.PNG" width="100%" /></p>
+<p>Here, <em>N</em> refers to the total number of sub-systems
+(soundscapes), <em>j</em> refers to each individual sub-system, and
+<em>wj</em> represents the relative weight given to each sub-system in
+the system. If all soundscapes are weighted equally, <em>wj</em> equals
+<em>1/N</em>. The alpha diversity is the Hill number of the averaged
+basic sums of the soundscapes (Eqn. 2). The gamma diversity is computed
+by taking the average of the relative abundance of each OSU across the
+soundscapes in the system and calculating the Hill number of the pooled
+system (Eqn. 3). The beta diversity captures the degree of heterogeneity
+in the OSU composition across sites (Eqn. 4). It ranges from 1 to
+<em>N</em> and quantifies the relationship between the regional and
+local diversity, that is, how many times more diverse is the whole
+system in the effective number of OSUs compared to the sub-systems on
+average. The beta diversity can also be seen as the effective number of
+completely distinct soundscapes in the system.</p>
+<p>Now that we know the theory, let’s take a look at how we can do this
+in practice. In its most basic form, the <code>ss_divpart</code>
+function takes the following arguments:</p>
+<div class="warning"
+style="background-color:#ffd2c2; color: #000000; border-left: solid #db5f32 4px; border-radius: 4px; padding:0.7em;">
+<span>
+<p style="margin-top:1em; text-align:center">
+<b>Function input parameters</b>
+</p>
+<p style="margin-left:1em;">
+<ul>
+<li><p><span style="font-weight: bold;">soundscape_list:</span><br> A
+list of soundscape objects of equal dimensions, each soundscape object
+being produced by ss_create (or ss_index_merge, ss_binarize and
+ss_aggregate in sequence)<br><br></p></li>
+<li><p><span style="font-weight: bold;">qvalue:</span><br> A positive
+integer or decimal number (&gt;=0), most commonly between 0-3. This
+parameter modulates the sensitivity of diversity values to the relative
+abundance of Operational Sound Units (OSUs). A value of 0 corresponds to
+the richness, a value of 1 is the equivalent number of effective OSUs
+for the Shannon index, a value of 2 is the equivalent number of
+effective OSUs for the Simpson index.<br><br></p></li>
+</ul>
+</p>
+<p></span></p>
+</div>
+<p>Now, we can use our island system to see how the overall system
+soundscape diversity (gamma) differs from the local soundscape diversity
+(alpha), and what the soundscape turnover (beta diversity) looks
+like.</p>
+<p><strong>Let’s try the code to decompose the soundscape richness into
+its various components:</strong></p>
+<div class="sourceCode" id="cb148"><pre
+class="sourceCode r"><code class="sourceCode r"><span id="cb148-1"><a href="#cb148-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ss_divpart</span>(<span class="at">soundscape_list =</span> soundscape_list,</span>
+<span id="cb148-2"><a href="#cb148-2" aria-hidden="true" tabindex="-1"></a>           <span class="at">qvalue =</span> <span class="dv">0</span>)</span></code></pre></div>
+<pre><code>## # A tibble: 1 × 7
+##   levels     q alpha_l1 gamma    N1    N2 beta_l1
+##    &lt;dbl&gt; &lt;dbl&gt;    &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;   &lt;dbl&gt;
+## 1      2     0     31.4  57.2     5     1    1.82</code></pre>
+<p>We can see that the system’s alpha soundscape richness is 31.4%, the
+average richness of the local soundscape. However, overall, the
+consolidated soundscape richness of the system (gamma richness) is 57.2%
+- almost twice as high. A lower alpha richness at each location, but
+higher gamma richness when taking all locations together, suggests there
+might be some OSU turnover going on between our soundscapes - they are
+not identical. Indeed, this is confirmed by the soundscape turnover
+(beta), which is 1.82. In theory, this value can range from 1 (all
+soundscapes completely identical) to 5 (all soundscapes completely
+distinct). Our value here suggests that there is low to moderate
+turnover in the OSU composition between the soundscapes in our
+system.</p>
+<p>But not all soundscapes in our study system are equal - some are more
+similar to others. For example, we have four soundscapes from Mascote
+island, but only one soundscape from Aline island. We can incorporate
+this ‘grouping’ or ‘hierarchical structure’ into our our diversity
+partitioning calculations.</p>
+<p><strong>Let’s have a look at the next argument of the
+<code>ss_divpart</code> function:</strong></p>
+<div class="warning"
+style="background-color:#ffd2c2; color: #000000; border-left: solid #db5f32 4px; border-radius: 4px; padding:0.7em;">
+<span>
+<p style="margin-top:1em; text-align:center">
+<b>Function input parameters</b>
+</p>
+<p style="margin-left:1em;">
+<ul>
+<li><span style="font-weight: bold;">hier_table:</span><br> A matrix
+indicating the relationship between the soundscapes in the
+soundscape_list. The first column lists the names of all the soundscapes
+in the soundscape_list, other columns can be used to group soundscapes
+into higher hierarchical levels. If no hierarchy table is supplied, the
+function defaults to a 2-level diversity partitioning.<br><br></li>
+</ul>
+</p>
+<p></span></p>
+</div>
+<p>As we can see, we can supply the <code>ss_divpart</code> function
+with a table indicating the hierarchy between samples.</p>
+<p><strong>Let’s give this a try:</strong></p>
+<div class="sourceCode" id="cb150"><pre
+class="sourceCode r"><code class="sourceCode r"><span id="cb150-1"><a href="#cb150-1" aria-hidden="true" tabindex="-1"></a>hierarchy_table <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(</span>
+<span id="cb150-2"><a href="#cb150-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">data.frame</span>(<span class="at">Sample =</span> <span class="fu">c</span>(<span class="st">&quot;Andre&quot;</span>, <span class="st">&quot;Mascote_A1&quot;</span>, <span class="st">&quot;Mascote_A2&quot;</span>, <span class="st">&quot;Mascote_B1&quot;</span>, <span class="st">&quot;Mascote_B2&quot;</span>), </span>
+<span id="cb150-3"><a href="#cb150-3" aria-hidden="true" tabindex="-1"></a>             <span class="at">grouping_1 =</span> <span class="fu">c</span>(<span class="st">&quot;Andre&quot;</span>, <span class="st">&quot;Mascote&quot;</span>, <span class="st">&quot;Mascote&quot;</span>, <span class="st">&quot;Mascote&quot;</span>, <span class="st">&quot;Mascote&quot;</span>)))</span>
+<span id="cb150-4"><a href="#cb150-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb150-5"><a href="#cb150-5" aria-hidden="true" tabindex="-1"></a><span class="fu">ss_divpart</span>(<span class="at">soundscape_list =</span> soundscape_list, </span>
+<span id="cb150-6"><a href="#cb150-6" aria-hidden="true" tabindex="-1"></a>           <span class="at">qvalue =</span> <span class="dv">0</span>, </span>
+<span id="cb150-7"><a href="#cb150-7" aria-hidden="true" tabindex="-1"></a>           <span class="at">hier_table =</span> hierarchy_table)</span></code></pre></div>
+<pre><code>## # A tibble: 1 × 10
+##   levels     q alpha_l1 alpha_l2 gamma    N1    N2    N3 beta_l1 beta_l2
+##    &lt;dbl&gt; &lt;dbl&gt;    &lt;dbl&gt;    &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;   &lt;dbl&gt;   &lt;dbl&gt;
+## 1      3     0     31.4     35.5  57.2     5     2     1    1.13    1.61</code></pre>
+<p>As you can see, by defining the hierarchical relationships between
+the plots on our islands, the output has changed a little. We now obtain
+two alpha richness values, one calculated at the sample (or plot) level,
+and one calculated at the level of the grouping we specified
+(islands).</p>
+<p>We also get two soundscape turnover values (beta), one for each
+grouping level:</p>
+<ol style="list-style-type: decimal">
+<li>β1 = γ-islands (35.5%) / α-plots (31.4%) = 1.13</li>
+<li>β2 = γ-total (57.2%) / α-islands (35.5%) = 1.61</li>
+</ol>
+<p>By using the <em>hier_table</em> argument, we can further decompose
+the soundscape metrics based on the hierarchical relationship between
+samples (plots).</p>
+<p>Yet, because beta diversity ranges between 1-N, it is not independent
+of the number of soundscapes in the system, and can thus not be used as
+a measure of similarity directly. Instead, to compare the relative
+compositional difference between soundscapes across multiple systems
+with a different number of soundscapes, some simple transformations can
+be performed on the beta diversity to remove the dependence on the
+number of soundscapes. To do this, we will use the next function.</p>
+<p><strong>Note:</strong> We can also partition the soundscape metrics
+using subsets of the soundscapes using the <em>minfreq</em>,
+<em>maxfreq</em>, <em>mintime</em> and <em>maxtime</em> arguments we’ve
+seen before.</p>
+</div>
+<div id="the-ss_pairdis-function" class="section level3">
+<h3>3.4. The <code>ss_pairdis</code> function</h3>
+<p>The framework of Hill numbers also allows us to define several
+measures of similarity between soundscapes in the wider system. Let’s
+take a look at how these are calculated:</p>
+<p><img src="images/pairwise_dissimilarity.PNG" width="100%" /></p>
+<p>Equations (5) and (6) are measures of overlap between soundscapes.
+The local or <strong>Sørensen-type overlap</strong> (<em>CqN</em>)
+quantifies the effective average proportion of a soundscape’s OSUs which
+are shared across all soundscapes. It captures the overlap between
+soundscapes from the sub-system’s perspective. For <em>N</em>
+soundscapes each having <em>S</em> equally common OSUs and sharing
+<em>A</em> OSUs between them, this function reduces to <em>CqN=A/S</em>.
+The regional or <strong>Jaccard-type overlap</strong>(<em>UqN</em>)
+quantifies the effective proportion of shared OSUs in a pooled
+assemblage of soundscapes, and thus captures the overlap between
+soundscapes from a regional perspective. Assume <em>N</em> soundscapes
+in a region with <em>S</em> unique and equally abundant OSUs. Here,
+<em>R</em> OSUs are shared between all soundscapes and the remaining
+OSUs (<em>S-R</em>) are distributed evenly among <em>N</em> soundscapes.
+In this scenario, Eqn. 8 reduces to <em>UqN = R/S</em>.</p>
+<p>Equations (7) and (8) are measures of turnover in OSUs between
+soundscapes. The local or <strong>Sørensen-type turnover
+complement</strong> (<em>VqN</em>) quantifies the normalised OSU
+turnover rate with respect to the average soundscape. It measures the
+proportion of a typical soundscape which changes as one goes from one
+soundscape to the next. The regional or <strong>Jaccard-type turnover
+complement</strong> (<em>SqN</em>) quantifies the proportion of the
+regional soundscape diversity contained in the average assemblage and is
+a measure of regional homogeneity.</p>
+<p>For all of the aforementioned similarity indices, the
+<code>ss_pairdis</code> function transforms the values into metrics of
+dissimilarity by taking their one-complement (<em>e.g.</em> 1 – XqN).
+Unlike the beta soundscape turnover, these dissimilarity indices range
+from 0-1, where 0 means the soundscapes are completely identical, and 1
+indicates the soundscapes are completely unique.</p>
+<p>If you want to learn more about the computation of similarity metrics
+using the framework of Hill numbers, have a look at the <a
+href="https://github.com/anttonalberdi/CLIMBATS_school_2020/blob/master/diversity_hillnumbers/4-Diversity_partitioning_and_dissimilarity_measurement.md">hilldiv
+GitHub tutorial here</a> and <a
+href="https://onlinelibrary.wiley.com/doi/full/10.1111/1755-0998.13014?casa_token=HSzss2ta-x8AAAAA%3Agx1wipMPwbFvb8pc6dy7W7vZxxDMi63_2jIKHYUH_5qPC1xYqKNbrQq3leGv1XEqnsFUhqgAPB0t4ihV">this
+paper</a>.</p>
+<p>To use the <code>ss_pairdis</code> function, we need to supply the
+same parameters as the <code>ss_divpart</code> function:
+<em>soundscape_list</em>, <em>qvalue</em> and <em>hier_table</em>
+(optional).</p>
+<p><strong>Let’s have a look:</strong></p>
+<div class="sourceCode" id="cb152"><pre
+class="sourceCode r"><code class="sourceCode r"><span id="cb152-1"><a href="#cb152-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ss_pairdis</span>(<span class="at">soundscape_list =</span> soundscape_list, </span>
+<span id="cb152-2"><a href="#cb152-2" aria-hidden="true" tabindex="-1"></a>           <span class="at">qvalue =</span> <span class="dv">0</span>)</span></code></pre></div>
+<pre><code>## $L1_beta
+##               Andre Mascote_A1 Mascote_A2 Mascote_B1 Mascote_B2
+## Andre            NA         NA         NA         NA         NA
+## Mascote_A1 1.608346         NA         NA         NA         NA
+## Mascote_A2 1.606310   1.409356         NA         NA         NA
+## Mascote_B1 1.614435   1.312740   1.374302         NA         NA
+## Mascote_B2 1.623355   1.264852   1.367437   1.274029         NA
+## 
+## $L1_CqN
+##                Andre Mascote_A1 Mascote_A2 Mascote_B1 Mascote_B2
+## Andre             NA         NA         NA         NA         NA
+## Mascote_A1 0.6083460         NA         NA         NA         NA
+## Mascote_A2 0.6063103  0.4093560         NA         NA         NA
+## Mascote_B1 0.6144346  0.3127399  0.3743021         NA         NA
+## Mascote_B2 0.6233550  0.2648524  0.3674368  0.2740286         NA
+## 
+## $L1_UqN
+##                Andre Mascote_A1 Mascote_A2 Mascote_B1 Mascote_B2
+## Andre             NA         NA         NA         NA         NA
+## Mascote_A1 0.7564865         NA         NA         NA         NA
+## Mascote_A2 0.7549106  0.5809122         NA         NA         NA
+## Mascote_B1 0.7611762  0.4764689  0.5447159         NA         NA
+## Mascote_B2 0.7679836  0.4187878  0.5374095  0.4301766         NA
+## 
+## $L1_VqN
+##                Andre Mascote_A1 Mascote_A2 Mascote_B1 Mascote_B2
+## Andre             NA         NA         NA         NA         NA
+## Mascote_A1 0.6083460         NA         NA         NA         NA
+## Mascote_A2 0.6063103  0.4093560         NA         NA         NA
+## Mascote_B1 0.6144346  0.3127399  0.3743021         NA         NA
+## Mascote_B2 0.6233550  0.2648524  0.3674368  0.2740286         NA
+## 
+## $L1_SqN
+##                Andre Mascote_A1 Mascote_A2 Mascote_B1 Mascote_B2
+## Andre             NA         NA         NA         NA         NA
+## Mascote_A1 0.7564865         NA         NA         NA         NA
+## Mascote_A2 0.7549106  0.5809122         NA         NA         NA
+## Mascote_B1 0.7611762  0.4764689  0.5447159         NA         NA
+## Mascote_B2 0.7679836  0.4187878  0.5374095  0.4301766         NA</code></pre>
+<p>Indeed, based on this output, we can see that the pairwise
+dissimilarity between the plots in our case study is greatest between
+the soundscape of <em>Andre</em> island and all other plots.
+Furthermore, within Mascote island, we can see that plot Mascote_A2 is
+most dissimilar from the other plots on the island - a pattern which we
+previously observed used the <code>ss_pcoa</code> function.</p>
 </div>
 </div>
 </div>

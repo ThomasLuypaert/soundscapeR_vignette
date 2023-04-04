@@ -16,7 +16,6 @@ h5, legend {
   color: #2d3e50;
 }
 
-
 #nav-top span.glyphicon {
 color: #22983B;
   }
@@ -36,9 +35,12 @@ background-image: linear-gradient(180deg,#d64a70,#d64a70);
                                   color: #c7254e;
                                     }
 
+#main {
+}
+
 #sidebar {
     color: #2d3e50;
-    background: #2d3e50
+    background: #2d3e50;
 }
 
 #sidebar h2 {
