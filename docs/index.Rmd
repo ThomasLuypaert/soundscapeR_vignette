@@ -65,7 +65,26 @@ For this case study, we will be looking at the soundscapes of two islands at the
 knitr::include_graphics("images/case_study_islands.PNG")
 ```
 
-The raw sound files for these 5 plots on 2 island can be downloaded from the online repository [here](link%20to%20repository).
+The raw sound files for these 5 plots on 2 island can be downloaded from the online [repository](https://datadryad.org/stash/share/JUnmste-fWNy3UUkjko86mA3iGKxOrSI9iHsLzmPo0s).
+
+If you wish to follow along with this tutorial, download the raw sound files from the link above and unzip the downloaded folder. Go inside the unzipped directory and copy the file path to the output_dir object below:
+
+```{r, eval = FALSE}
+
+output_dir <- "PASTE_THE_FULL_PATH_TO_THE_LOCATION_OF_THE_DOWNLOADED_AND_UNZIPPED_FILES_HERE"
+
+folder_locs <- list.dirs(path = output_dir, recursive = FALSE)
+
+```
+
+Inside the unzipped directory, you will find 5 zipped folders. Unzip each of these to the same location. Now proceed with the code below.
+
+```{r, echo=FALSE, eval=TRUE, include=FALSE}
+
+output_dir <- "G:/soundscapeR_paper_data"
+folder_locs <- list.dirs(path = output_dir, recursive = FALSE)
+
+```
 
 ------------------------------------------------------------------------
 
@@ -108,21 +127,23 @@ To simplify the use of the `soundscapeR` package, we created an S4-object which 
 **Take a look at Figure 3 for an overview of the `soundscapeR` workflow:**
 
 ```{r figure 3, echo=FALSE, fig.cap="Figure 3: A schematic overview of the `soundscapeR` workflow", out.width = '100%'}
-knitr::include_graphics("images/Plot_1_soundscapeR_workflow.png")
+knitr::include_graphics("images/Plot_1_soundscapeR_workflow.PNG")
 ```
 
 
 
+**As you can see, there are four phases to the `soundscapeR` workflow:**
 
-**As you can see, there are three phases to the `soundscapeR` workflow:**
-
--    **Phase 1:** Prepare a soundscape object using the `ss_index_calc` function for index calculation and the `ss_create` function for calculating OSU presence and incidence across the recording period\
+-    **Phase 1:** Detect where the raw sound files are located using the  `ss_find_files` function and assess that all the files are in order using the `ss_assess_files` function\
     \
 
--   **Phase 2:** Explore the diversity of a single soundscape using the `ss_heatmap`, `ss_diversity`, `ss_evenness`, and `ss_diversity_plot` functions\
+-    **Phase 2:** Prepare a soundscape object using the `ss_index_calc` function for index calculation and the `ss_create` function for calculating OSU presence and incidence across the recording period\
+    \
+
+-   **Phase 3:** Explore the diversity of a single soundscape using the `ss_heatmap`, `ss_diversity`, `ss_evenness`, and `ss_diversity_plot` functions\
     \
     
--   **Phase 3:** Compare the diversity of multiple soundscapes using the `ss_compare`, `ss_pcoa`, `ss_divpart`, and `ss_pairdis` functions\
+-   **Phase 4:** Compare the diversity of multiple soundscapes using the `ss_compare`, `ss_pcoa`, `ss_divpart`, and `ss_pairdis` functions\
     \
 
 
@@ -132,14 +153,138 @@ Below, we will go over each of these phases and show you how to use each functio
 
 ## Phase I: Preparing soundscapes
 
-### 1.1. The `ss_index_calc` function
+### 1.1. Managing sound files: `ss_find_files` and `ss_assess_files`
+
+Before getting into the details of the workflow, let's talk about sound files, file naming, and the expected file structure. At this point, we assume you've successfully gone out and collected soundscape recordings for a certain period of time at one or multiple sites of interest. These files are now stored somewhere on your device, external hard drive, or HPC. 
+
+**To manage these sound files and extract the required information from them, the `soundscapeR` workflow expects files to be named using the following format:** \
+
+`SITENAME_YYYYMMDD_HHMMSS.wav` \
+\
+
+**Moreover, the `soundscapeR` package expects the sound files to be stored in directories following one of the following structures:**
+
+```{r figure 4, echo=FALSE, fig.cap="Figure 4: A schematic overview of the expected file structure", out.width = '100%'}
+knitr::include_graphics("images/file_structure.png")
+```
+
+
+Now, we can tell `soundscapeR` where to look for these files using the `ss_find_files` function. This function will automatically detect all the soundfiles in a parent directory and all subdirectories, and save the location to each detected sound file in a list that maintains the directory architecture shown in Fig 4. \
+\
+Let's take a look at the input parameters of the `ss_find_files` function:
+
+<div class="warning" style='background-color:#ffd2c2; color: #000000; border-left: solid #db5f32 4px; border-radius: 4px; padding:0.7em;'>
+<span>
+<p style='margin-top:1em; text-align:center'>
+<b>Function input parameters</b></p>
+<p style='margin-left:1em;'>
+
+- <span style="font-weight: bold;">parent_directory:</span><br> The full-length path to a directory containing .wav files, or a directory containing directories with .wav files. If the latter, this function will look for .wav files recursively in all subdirectories.<br><br>
+
+</p>
+</span>
+</div>
+
+As we can see, the `ss_find_files` function only takes a single input argument: the name of a directory containing *.wav* files, or a parent directory containing named directories with *.wav* files. 
+
+**Let's give this a try:**
+
+```{r}
+
+  # Find the file locations
+
+filelocs <- ss_find_files(parent_directory = output_dir)
+names(filelocs) <- c("Andre", "Mascote_A1", "Mascote_A2", "Mascote_B1", "Mascote_B2")
+
+  # Show us what the fileloc output looks like
+
+summary(filelocs)
+head(filelocs[[1]])
+
+```
+
+The `ss_find_files` function created a list of length 5 (one for each soundscape plot in our case study). Each list element contains a 1,440 character strings which gives the file path to each 1-minute sound file for each soundscape. \
+\
+However, it is possible that something went wrong during the sound recording stage, or when we transferred the files from our acoustic sensor to our storage device, leading to missing files or gaps in the soundscape recordings. This is where the `ss_assess_files` function comes into play. The `ss_assess_files` function will automatically detect the sampling regime of the study, and based on this, will check whether: (i) any files are missing; and (ii) all soundscapes in the *filelocs* list had the same sampling regime. 
+
+**Let's give this a try:**
+
+```{r}
+
+filelocs <- ss_assess_files(file_locs = filelocs, 
+                            full_days = FALSE)
+
+
+```
+
+As we can see, the `ss_assess_files` function successfully detected that our sound was sampled for 1 minute every 5 minutes, resulting in 288 files per day. Since no other error message was thrown, it appears no files were missing. 
+
+**Let's take a look at what would happen if files were missing:**
+
+```{r, error=TRUE}
+
+  # Simulate a soundscape with missing data
+
+filelocs_missing <- filelocs
+filelocs_missing[[1]] <- filelocs_missing[[1]][-seq(1, length(filelocs_missing[[1]]), 5)]
+
+  # Run the ss_assess_files function
+
+filelocs_missing <- ss_assess_files(file_locs = filelocs_missing, 
+                                    full_days = FALSE)
+
+
+```
+
+As you can see, the `ss_assess_files` function generates an error message if the files in fileloc deviate from the expected sampling regime. 
+
+Finally, using the `ss_assess_files` function, we can also remove any sound files from the *fileloc* object that are not part of a full soundscape sample (24h period). We do this because, otherwise, we would have an uneven number of samples per time of day. To do so, we use the `full_days = TRUE` argument. 
+
+**Let's give this a try:**
+
+```{r}
+
+  # Create a soundscape with sound files that are not part of a complete soundscape sample
+
+filelocs_incomplete <- filelocs
+filelocs_incomplete[[1]] <- filelocs[[1]][5:length(filelocs[[1]])]
+
+  # Run ss_assess_files again
+
+filelocs_incomplete_fixed <- ss_assess_files(file_locs = filelocs_incomplete, 
+                            full_days = TRUE)
+
+
+```
+It seems like there was an incomplete soundscape sample, `ss_assess_files` removed some soundfiles so only complete soundscape samples (24h period) were retained. 
+
+**Let's have a look at the before and after:** 
+
+```{r}
+
+# Before
+
+length(filelocs_incomplete[[1]])
+
+# After
+
+length(filelocs_incomplete_fixed[[1]])
+
+
+```
+
+The `ss_assess_files` function has detected an incomplete soundscape sample and removed sound files until the 'previous' complete sample was found - in this case 1,152 files, or 4 full sampling days (288 * 4 = 1,152). 
+
+Great, now that we know how these two file management functions work, we can proceed!
+
+### 1.2. Calculate ecoacoustic indices: The `ss_index_calc` function
 
 ##### A. In theory
 \
 
 To quantify the presence of OSUs in each day of the recording period, first, we will make use the **Acoustic Cover (CVR)** spectral acoustic index (also known as *ACTsp* in the [Towsey 2017](https://eprints.qut.edu.au/110634/1/QUTePrints110634_TechReport_Towsey2017August_AcousticIndices%20v3.pdf) technical report) to capture the acoustic properties of sound in our 1-minute recordings. Per sound file, this index captures the fraction of cells in each noise-reduced frequency bin whose value exceeds a 3 dB threshold. By using this spectral acoustic index, we greatly condense the amount of information contained in these sound files while retaining important data on their time-frequency features. For more information on spectral acoustic indices are their use, check out [this](https://research.ecosounds.org/research/eadm-towsey/long-duration-audio-recordings-of-the-environment) website.\
 \
-To calculate these spectral indices, we will use the `ss_index_calc()` function. This function calls on the 'AnalysisPrograms' software tool, developed by the QUT Ecoacoustic group, to compute a series of spectral acoustic indices.\
+To calculate these spectral indices, we will use the `ss_index_calc()` function. This function follows the protocol outlined in [Towsey 2017](https://eprints.qut.edu.au/110634/1/QUTePrints110634_TechReport_Towsey2017August_AcousticIndices%20v3.pdf), and per 1-minute sound file, produces a vector of CVR-index values, one for each frequency bin of the spectrogram.\
 \
 
 Let's take a look at the input parameters of the `ss_index_calc` function:
@@ -150,15 +295,15 @@ Let's take a look at the input parameters of the `ss_index_calc` function:
 <b>Function input parameters</b></p>
 <p style='margin-left:1em;'>
 
-- <span style="font-weight: bold;">fileloc:</span><br> The full-length path to the folder containing the sound files for which to compute indices. In our case, for each plot, we stored the sound files in a separate folder which we will supply to the fileloc argument.<br><br>
+- <span style="font-weight: bold;">filelist:</span><br> file_list A list containing the full-length path to each '.wav' file in a folder. This list can be obtained using the `ss_find_files` and `ss_assess_files` functions.<br><br>
 
-- <span style="font-weight: bold;">outputloc:</span><br> The full-length path to the location where you wish to save the output files. Defaults to the same location as the fileloc.<br><br>
+- <span style="font-weight: bold;">outputdir:</span><br> The full-length path to an output directory on your device. If not specified, will default to the location where the raw sound files are saved.<br><br>
 
-- <span style="font-weight: bold;">samplerate:</span><br> The number of times the sound was sampled each second. This is a fixed parameter determined by your recording setup, although downsampling to a lower sampling rate is possible.<br><br>
+- <span style="font-weight: bold;">window:</span><br> The window length used for the Fast-Fourier Transformation. Defaults to 256.<br><br>
 
-- <span style="font-weight: bold;">window:</span><br> A variable of the Fast Fourier Transformation, expressed as the number of samples. The window size of choice depends on the fundamental frequency, intensity and change of the signal of interest, and influences the temporal and frequency resolution of the analysis. The window size is generally a power of 2.<br><br>
+- <span style="font-weight: bold;">theta:</span><br> The cut-off dB-value above which sound is considered present in a frequency bin. Defaults to 3 dB.<br><br>
 
-- <span style="font-weight: bold;">parallel:</span><br> A boolean flag (TRUE of FALSE) indicating whether parallel processing should be enabled for index computation. Set to FALSE by default.
+- <span style="font-weight: bold;">parallel:</span><br> A boolean operator indicating whether parallel processing should be used to calculate the CVR-index files.
 
 </p>
 </span>
@@ -185,7 +330,7 @@ Below, you can find the code to calculate the CVR-index for all sound files in a
 
 Because the index calculation can be time consuming, for the purposes of this vignette, here we will download the CVR-index '.csv' files we previously calculated from the [KNB repository](doi:10.5063/F1WQ0285): 
 
-```{r, results='hide'}
+```{r, results='hide',eval = FALSE}
 
   # 1. Download the metajam package 
 
@@ -224,8 +369,9 @@ In addition to the sound data, we will also require some metadata for the downst
 island_metadata <- data.frame(plot = c("Andre", "Mascote_A1", "Mascote_A2", "Mascote_B1", "Mascote_B2"), 
                               first_day = c("2015-10-10", rep("2015-10-16", 4)), 
                               lat = c(-1.58462, -1.64506, -1.6489, -1.64406, -1.65936), 
-                              lon = c(-59.87211, -59.82035, -59.83297, -59.84817, -59.83546), 
-                              folder_locs = folder_locs)
+                              lon = c(-59.87211, -59.82035, -59.83297, -59.84817, -59.83546))
+
+island_metadata$folderloc <- folder_locs
 
 
 
@@ -234,7 +380,7 @@ island_metadata <- data.frame(plot = c("Andre", "Mascote_A1", "Mascote_A2", "Mas
 
 ------------------------------------------------------------------------
 
-### 1.2. The `ss_create` function
+### 1.3. Create a soundscape: The `ss_create` function
 
 ##### A. In theory
 
@@ -296,23 +442,26 @@ Now that we know which input parameters to provide, let's give this a try. We wi
 
 **Let's run the `ss_create` function:**
 
-```{r, results='hide', cache=TRUE}
+```{r, results='hide', cache=TRUE, cache = TRUE}
 
-soundscape_list <- 
+balbina <- vector("list")
+
+for (i in 1:nrow(island_metadata)){
   
-  lapply(X = 1:nrow(island_metadata), function(x) 
-    ss_create(fileloc = island_metadata$folder_locs[x], 
-              samplerate = 44100,
-              window = 256, 
-              index = "CVR", 
-              date = island_metadata$first_day[x], 
-              lat = island_metadata$lat[x], 
-              lon = island_metadata$lon[x], 
-              method = "IsoData", 
-              output = "incidence_freq"))
+  balbina[[i]] <- ss_create(fileloc = island_metadata$folderloc[i], 
+                            samplerate = 44100, 
+                            window = 256, 
+                            index = "CVR", 
+                            date = island_metadata$first_day[i], 
+                            lat = island_metadata$lat[i], 
+                            lon = island_metadata$lon[i], 
+                            method = "IsoData", 
+                            output = "incidence_freq")
+  
+}
                             
 
-names(soundscape_list) <- c("Andre", "Mascote_A1", "Mascote_A2", "Mascote_B1", "Mascote_B2")
+names(balbina) <- c("Andre", "Mascote_A1", "Mascote_A2", "Mascote_B1", "Mascote_B2")
 
 
 ```
@@ -322,7 +471,7 @@ Doing so, we will get a list of soundscape objects for further analysis. But bef
 
 ------------------------------------------------------------------------
 
-### 1.3. Introducing the `soundscape` object
+### 1.4. Introducing the `soundscape` object
 
 As we previously mentioned, the `ss_create` function requires us to provide some additional metadata information, as well as several parameters on how the data should be processed. Using the `ss_create` function, we are creating a new type of data object which stores all the relevant information, and will form the basis on which all subsequent functions in the workflow are performed! 
 
@@ -334,7 +483,7 @@ As we previously mentioned, the `ss_create` function requires us to provide some
 
 # Let's see what class this object is:
 
-summary(soundscape_list[["Andre"]])
+summary(balbina[["Andre"]])
 
 ```
 
@@ -344,7 +493,7 @@ This new data object is an 'S4' object of the class *soundscape*.
 
 # Let's see what sort of information this object holds
 
-soundscape_list[["Andre"]]
+balbina[["Andre"]]
 
 
 ```
@@ -366,12 +515,12 @@ To access the information stored in this object, we will use the **'@'** symbol.
 
 # Let's check what sort of data collection metadata is stored in the object
 
-print(paste0("First day of data collection: ", soundscape_list[["Andre"]]@first_day))
-print(paste0("Latitude at data collection site: ", soundscape_list[["Andre"]]@lat))
-print(paste0("Longitude at data collection site: ", soundscape_list[["Andre"]]@lon))
-print(paste0("Time zone at data collection site: ", soundscape_list[["Andre"]]@tz))
-print(paste0("Sunrise at time of data collection: ", soundscape_list[["Andre"]]@sunrise))
-print(paste0("Sunset at time of data collection: ", soundscape_list[["Andre"]]@sunset))
+print(paste0("First day of data collection: ", balbina[["Andre"]]@first_day))
+print(paste0("Latitude at data collection site: ", balbina[["Andre"]]@lat))
+print(paste0("Longitude at data collection site: ", balbina[["Andre"]]@lon))
+print(paste0("Time zone at data collection site: ", balbina[["Andre"]]@tz))
+print(paste0("Sunrise at time of data collection: ", balbina[["Andre"]]@sunrise))
+print(paste0("Sunset at time of data collection: ", balbina[["Andre"]]@sunset))
 
 ```
 
@@ -383,10 +532,10 @@ The `ss_create` function has automatically calculated a set of important ecologi
 
 # Let's check what sort of metadata the object has stored regarding past data processing steps
 
-print(paste0("Where are the raw sound files located: ", soundscape_list[["Andre"]]@fileloc))
-print(paste0("What acoustic index are we using: ", soundscape_list[["Andre"]]@index, " index"))
-print(paste0("What was the samplerate used to collect the data: ", soundscape_list[["Andre"]]@samplerate, " Hz"))
-print(paste0("What was the window length used during the FFT: ", soundscape_list[["Andre"]]@window, " samples"))
+print(paste0("Where are the raw sound files located: ", balbina[["Andre"]]@fileloc))
+print(paste0("What acoustic index are we using: ", balbina[["Andre"]]@index, " index"))
+print(paste0("What was the samplerate used to collect the data: ", balbina[["Andre"]]@samplerate, " Hz"))
+print(paste0("What was the window length used during the FFT: ", balbina[["Andre"]]@window, " samples"))
 
 ```
 
@@ -396,7 +545,7 @@ The *soundscape* object has recorded where our raw data files are stored, which 
 
 ```{r}
 
-head(soundscape_list[["Andre"]]@merged_df)[,1:5]
+head(balbina[["Andre"]]@merged_df)[,1:5]
 
 ```
 
@@ -408,12 +557,12 @@ As we previously mentioned, the first step performed by the `ss_create` function
 
 # How many columns does the data frame contain?
 
-paste0("The data frame contains: ", ncol(soundscape_list[["Andre"]]@merged_df), " columns")
+paste0("The data frame contains: ", ncol(balbina[["Andre"]]@merged_df), " columns")
 
 # What are the column names?
 
-head(colnames(soundscape_list[["Andre"]]@merged_df))
-tail(colnames(soundscape_list[["Andre"]]@merged_df))
+head(colnames(balbina[["Andre"]]@merged_df))
+tail(colnames(balbina[["Andre"]]@merged_df))
 
 ```
 
@@ -425,17 +574,17 @@ As we said, the number of columns equals the number of sound files collected dur
 
 # How many rows does the data frame contain?
 
-paste0("The data frame contains: ", nrow(soundscape_list[["Andre"]]@merged_df), " rows")
+paste0("The data frame contains: ", nrow(balbina[["Andre"]]@merged_df), " rows")
 
 # What do these row names look like?
 
   # The first five names
 
-paste0("The first five rownames: ", paste0(rownames(soundscape_list[["Andre"]]@merged_df)[1:5], collapse = ", "))
+paste0("The first five rownames: ", paste0(rownames(balbina[["Andre"]]@merged_df)[1:5], collapse = ", "))
 
   # The last five names
 
-paste0("The last five rownames: ", paste0(rownames(soundscape_list[["Andre"]]@merged_df)[123:128], collapse = ", "))
+paste0("The last five rownames: ", paste0(rownames(balbina[["Andre"]]@merged_df)[123:128], collapse = ", "))
 
 
 ```
@@ -448,11 +597,11 @@ The data frame contains 128 rows, each corresponding to a unique frequency bin. 
 
 # What is the minimum CVR-index value in our data frame?
 
-paste0("The minimum CVR-value in our data frame is: ", min(soundscape_list[["Andre"]]@merged_df))
+paste0("The minimum CVR-value in our data frame is: ", min(balbina[["Andre"]]@merged_df))
 
 # What is the maximum CVR-index value in our data frame?
 
-paste0("The max CVR-value in our data frame is: ", max(soundscape_list[["Andre"]]@merged_df))
+paste0("The max CVR-value in our data frame is: ", max(balbina[["Andre"]]@merged_df))
 
 
 ```
@@ -467,11 +616,11 @@ After the CVR-indices for a soundscape recording of a site have been chronologic
 
 # Which threshold algorithm was used for binarization?
 
-paste0("The ", soundscape_list[["Andre"]]@binarization_method, " method was used for binarization")
+paste0("The ", balbina[["Andre"]]@binarization_method, " method was used for binarization")
 
 # Which threshold was used for binarization?
 
-paste0("The threshold used for binarization was: ", soundscape_list[["Andre"]]@threshold)
+paste0("The threshold used for binarization was: ", balbina[["Andre"]]@threshold)
 
 
 ```
@@ -484,11 +633,11 @@ Additionally, a `binarized_df` data frame was added to the object.
 
 # What are the dimensions of the binarized dataframe?
 
-dim(soundscape_list[["Andre"]]@binarized_df)
+dim(balbina[["Andre"]]@binarized_df)
 
 # What are the unique values contained in this data frame?
 
-unique(unlist(soundscape_list[["Andre"]]@binarized_df))
+unique(unlist(balbina[["Andre"]]@binarized_df))
 
 ```
 
@@ -509,11 +658,11 @@ The *soundscape* object contains some information related to this step. Let's in
 # First, let's check out the new 'aggregated_df' data frame
 
 paste0("The aggregated_df data frame has ", 
-       nrow(soundscape_list[["Andre"]]@aggregated_df), 
+       nrow(balbina[["Andre"]]@aggregated_df), 
        " rows")
 
 paste0("The aggregated_df data frame has ", 
-       ncol(soundscape_list[["Andre"]]@aggregated_df), 
+       ncol(balbina[["Andre"]]@aggregated_df), 
        " columns")
 
 ```
@@ -527,7 +676,7 @@ The number of rows in the *'aggregated_df'* data frame that was added to the *so
 ```{r aggregate_df_inspection-2, exercise = TRUE}
 
 paste0("The relative abundance of OSUs can take the following values: ", 
-       paste(sort(unique(unlist(soundscape_list[["Andre"]]@aggregated_df))), collapse = ","))
+       paste(sort(unique(unlist(balbina[["Andre"]]@aggregated_df))), collapse = ","))
 
 ```
 
@@ -584,7 +733,7 @@ In it's most basic form, the `ss_heatmap` function only takes a single argument.
 
 ```{r, fig.height= 7, fig.width= 7, warning=FALSE, error=FALSE, comment=FALSE, cache=TRUE}
 
-ss_heatmap(soundscape_obj = soundscape_list[["Andre"]])
+ss_heatmap(soundscape_obj = balbina[["Andre"]])
 
 ```
 
@@ -614,7 +763,7 @@ In addition to the base heatmap we produced above, the `ss_heatmap` function als
 
 ```{r, fig.width= 7, fig.height= 7, eval=FALSE}
 
-ss_heatmap(soundscape_obj = soundscape_list[["Andre"]],
+ss_heatmap(soundscape_obj = balbina[["Andre"]],
            type = "polar")
 
 ```
@@ -651,14 +800,14 @@ Next up, let's have a look at how we can add some ecologically important varible
 # Regular heatmap
 
 regular_heatmap_annotated <- 
-  ss_heatmap(soundscape_obj = soundscape_list[["Andre"]],
+  ss_heatmap(soundscape_obj = balbina[["Andre"]],
              type = "regular", 
              annotate = TRUE)
 
 # Polar heatmap
 
 polar_heatmap_annotated <- 
-  ss_heatmap(soundscape_obj = soundscape_list[["Andre"]],
+  ss_heatmap(soundscape_obj = balbina[["Andre"]],
              type = "polar", 
              annotate = TRUE)
 
@@ -705,7 +854,7 @@ The `ss_heatmap` function also contains parameters to change the aesthetics of t
 
 ```{r, fig.height=7, fig.width=7, cache=TRUE}
 
-ss_heatmap(soundscape_obj = soundscape_list[["Andre"]],
+ss_heatmap(soundscape_obj = balbina[["Andre"]],
            timeinterval = "4 hours", 
            freqinterval = 1000)
 
@@ -742,7 +891,7 @@ If we are only interested the a subset of the acoustic trait space, the `ss_heat
 
 ```{r, fig.height=7, fig.width=7, cache=TRUE}
 
-ss_heatmap(soundscape_obj = soundscape_list[["Andre"]],
+ss_heatmap(soundscape_obj = balbina[["Andre"]],
            mintime = "06:00:00", 
            maxtime = "18:00:00" , 
            minfreq = 0 , 
@@ -780,23 +929,23 @@ We can also alter the color aesthetics that are mapped to the OSU relative abund
 # Try the palettes one by one
 
 color_1 <- 
-  ss_heatmap(soundscape_obj = soundscape_list[["Andre"]],
+  ss_heatmap(soundscape_obj = balbina[["Andre"]],
            palette = "A")
 
 color_2 <- 
-  ss_heatmap(soundscape_obj = soundscape_list[["Andre"]],
+  ss_heatmap(soundscape_obj = balbina[["Andre"]],
            palette = "B")
 
 color_3 <- 
-  ss_heatmap(soundscape_obj = soundscape_list[["Andre"]],
+  ss_heatmap(soundscape_obj = balbina[["Andre"]],
            palette = "C")
 
 color_4 <- 
-  ss_heatmap(soundscape_obj = soundscape_list[["Andre"]],
+  ss_heatmap(soundscape_obj = balbina[["Andre"]],
            palette = "D")
 
 color_5 <- 
-  ss_heatmap(soundscape_obj = soundscape_list[["Andre"]],
+  ss_heatmap(soundscape_obj = balbina[["Andre"]],
            palette = "E")
 
 
@@ -823,12 +972,12 @@ With the **palette** option, we can choose which of the *viridis* color palettes
 # Try the direction options
 
 direction_1 <- 
-  ss_heatmap(soundscape_obj = soundscape_list[["Andre"]], 
+  ss_heatmap(soundscape_obj = balbina[["Andre"]], 
              palette = "magma", 
              direction = 1)
 
 direction_2 <- 
-  ss_heatmap(soundscape_obj = soundscape_list[["Andre"]], 
+  ss_heatmap(soundscape_obj = balbina[["Andre"]], 
              palette = "magma", 
              direction = -1)
 
@@ -855,12 +1004,12 @@ The **direction** argument can be used to inverse the color scales of the viridi
 # Try the direction options
 
 zero_black_off <- 
-  ss_heatmap(soundscape_obj = soundscape_list[["Andre"]], 
+  ss_heatmap(soundscape_obj = balbina[["Andre"]], 
              palette = "viridis", 
              zero.black = FALSE)
 
 zero_black_on <- 
-  ss_heatmap(soundscape_obj = soundscape_list[["Andre"]], 
+  ss_heatmap(soundscape_obj = balbina[["Andre"]], 
              palette = "viridis", 
              zero.black = TRUE)
 
@@ -902,7 +1051,7 @@ The `ss_heatmap` function can also be used to make interactive heatmaps.
 
 ```{r, comment= FALSE, error=FALSE, message=FALSE, warning=FALSE, echo=FALSE, cache=TRUE}
 
-ss_heatmap(soundscape_obj = soundscape_list[["Andre"]],
+ss_heatmap(soundscape_obj = balbina[["Andre"]],
            type = "regular", 
            interactive = TRUE)
 
@@ -1031,19 +1180,19 @@ Let's look at an example of what the various arguments are and change about the 
 
 # Soundscape richness
 
-ss_diversity(soundscape_obj = soundscape_list[["Andre"]], 
+ss_diversity(soundscape_obj = balbina[["Andre"]], 
          qvalue = 0, 
          output = "raw")
 
 # Soundscape diversity at q=1
 
-ss_diversity(soundscape_obj = soundscape_list[["Andre"]],
+ss_diversity(soundscape_obj = balbina[["Andre"]],
          qvalue = 1, 
         output = "raw")
 
 # Soundscape diversity at q=2
 
-ss_diversity(soundscape_obj = soundscape_list[["Andre"]],
+ss_diversity(soundscape_obj = balbina[["Andre"]],
          qvalue = 2, 
         output = "raw")
 
@@ -1058,19 +1207,19 @@ As we can see, the higher the *q-value*, the less importance is given to rare OS
 
 # Soundscape richness
 
-ss_diversity(soundscape_obj = soundscape_list[["Andre"]],
+ss_diversity(soundscape_obj = balbina[["Andre"]],
          qvalue = 0, 
          output = "percentage")
 
 # Soundscape diversity at q=1
 
-ss_diversity(soundscape_obj = soundscape_list[["Andre"]],
+ss_diversity(soundscape_obj = balbina[["Andre"]],
          qvalue = 1, 
         output = "percentage")
 
 # Soundscape diversity at q=2
 
-ss_diversity(soundscape_obj = soundscape_list[["Andre"]],
+ss_diversity(soundscape_obj = balbina[["Andre"]],
          qvalue = 2, 
         output = "percentage")
 
@@ -1108,7 +1257,7 @@ We will use the `ss_evenness` function to calculate the soundscape evenness:
 
 # Soundscape evenness 
 
-ss_evenness(soundscape_obj = soundscape_list[["Andre"]])
+ss_evenness(soundscape_obj = balbina[["Andre"]])
 
 
 ```
@@ -1154,28 +1303,28 @@ In addition to calculting the soundscape richness, diversity and evenness for th
 
   # subset = 'day'
 
-ss_diversity(soundscape_obj = soundscape_list[["Andre"]], 
+ss_diversity(soundscape_obj = balbina[["Andre"]], 
              qvalue = 0, 
              output = "percentage",
              subset = "day")
 
   # subset = 'night'
 
-ss_diversity(soundscape_obj = soundscape_list[["Andre"]], 
+ss_diversity(soundscape_obj = balbina[["Andre"]], 
              qvalue = 0, 
              output = "percentage",
              subset = "night")
 
   # subset = 'dawn' 
 
-ss_diversity(soundscape_obj = soundscape_list[["Andre"]], 
+ss_diversity(soundscape_obj = balbina[["Andre"]], 
              qvalue = 0, 
              output = "percentage",
              subset = "dawn")
 
   # subset = 'dusk'
 
-ss_diversity(soundscape_obj = soundscape_list[["Andre"]], 
+ss_diversity(soundscape_obj = balbina[["Andre"]], 
              qvalue = 0, 
              output = "percentage",
              subset = "dusk")
@@ -1192,22 +1341,22 @@ The *subset* argument uses the metadata contained in the `soundscape` object (th
 
   # subset = 'day'
 
-ss_evenness(soundscape_obj = soundscape_list[["Andre"]], 
+ss_evenness(soundscape_obj = balbina[["Andre"]], 
              subset = "day")
 
   # subset = 'night'
 
-ss_evenness(soundscape_obj = soundscape_list[["Andre"]], 
+ss_evenness(soundscape_obj = balbina[["Andre"]], 
              subset = "night")
 
   # subset = 'dawn' 
 
-ss_evenness(soundscape_obj = soundscape_list[["Andre"]], 
+ss_evenness(soundscape_obj = balbina[["Andre"]], 
              subset = "dawn")
 
   # subset = 'dusk'
 
-ss_evenness(soundscape_obj = soundscape_list[["Andre"]], 
+ss_evenness(soundscape_obj = balbina[["Andre"]], 
              subset = "dusk")
 
 
@@ -1223,13 +1372,13 @@ By default, the dawn period is calculated as the time of sunrise + 1.5h, and the
 
 # Soundscape richness
 
-ss_diversity(soundscape_obj = soundscape_list[["Andre"]], 
+ss_diversity(soundscape_obj = balbina[["Andre"]], 
              qvalue = 0, 
              subset = "dawn", 
              dawnstart = 3600, 
              dawnend = 3600)
 
-ss_diversity(soundscape_obj = soundscape_list[["Andre"]], 
+ss_diversity(soundscape_obj = balbina[["Andre"]], 
              qvalue = 0, 
              subset = "dusk",
              duskstart = 3600, 
@@ -1246,7 +1395,7 @@ As you can see, by changing the time of dawn and dusk, we get slightly different
 
 # Soundscape richness
 
-head(ss_diversity(soundscape_obj = soundscape_list[["Andre"]], 
+head(ss_diversity(soundscape_obj = balbina[["Andre"]], 
              qvalue = 0, 
              output = "percentage", 
              subset = "tod"), n = 24)
@@ -1260,7 +1409,7 @@ We get 288 soundscape richness values (24 values shown here), one for each uniqu
 
 ```{r}
 
-ss_diversity(soundscape_obj = soundscape_list[["Andre"]], 
+ss_diversity(soundscape_obj = balbina[["Andre"]], 
              qvalue = 0, 
              output = "percentage",
              mintime = "11:00:00", 
@@ -1302,7 +1451,7 @@ We can also calculate the soundscape richness, diversity and evenness for user-s
 
   # 0 - 10,000 Hz
 
-ss_diversity(soundscape_obj = soundscape_list[["Andre"]], 
+ss_diversity(soundscape_obj = balbina[["Andre"]], 
              qvalue = 0, 
              output = "percentage",
              minfreq = 0, 
@@ -1310,7 +1459,7 @@ ss_diversity(soundscape_obj = soundscape_list[["Andre"]],
 
   # 10,000 - 20,000 Hz
 
-ss_diversity(soundscape_obj = soundscape_list[["Andre"]], 
+ss_diversity(soundscape_obj = balbina[["Andre"]], 
              qvalue = 0, 
              output = "percentage",
              minfreq = 10000, 
@@ -1328,7 +1477,7 @@ Finally, we can also divide the frequency spectrum into a user-specified number 
 
 ```{r}
 
-ss_diversity(soundscape_obj = soundscape_list[["Andre"]], 
+ss_diversity(soundscape_obj = balbina[["Andre"]], 
              qvalue = 0, 
              output = "percentage",
              freqseq = TRUE, 
@@ -1381,7 +1530,7 @@ Let's have a look at these plotting options one by one.
 
 # Temporal patterns in the soundscape richness
 
-ss_diversity_plot(soundscape_obj = soundscape_list[["Andre"]], 
+ss_diversity_plot(soundscape_obj = balbina[["Andre"]], 
                   qvalue = 0, 
                   graphtype = "total", 
                   output = "percentage", 
@@ -1416,7 +1565,7 @@ We can use the *smooth* and *movavg* arguments to apply a smoothing function to 
 
 # movavg = 6
 
-plot_1 <- ss_diversity_plot(soundscape_obj = soundscape_list[["Andre"]], 
+plot_1 <- ss_diversity_plot(soundscape_obj = balbina[["Andre"]], 
                   qvalue = 0, 
                   graphtype = "total", 
                   output = "percentage", 
@@ -1430,7 +1579,7 @@ plot_1 <- ss_diversity_plot(soundscape_obj = soundscape_list[["Andre"]],
 # movavg = 12
 
 
-plot_2 <- ss_diversity_plot(soundscape_obj = soundscape_list[["Andre"]], 
+plot_2 <- ss_diversity_plot(soundscape_obj = balbina[["Andre"]], 
                   qvalue = 0, 
                   graphtype = "total", 
                   output = "percentage", 
@@ -1445,7 +1594,7 @@ plot_2 <- ss_diversity_plot(soundscape_obj = soundscape_list[["Andre"]],
 # movavg = 24
 
 
-plot_3 <- ss_diversity_plot(soundscape_obj = soundscape_list[["Andre"]], 
+plot_3 <- ss_diversity_plot(soundscape_obj = balbina[["Andre"]], 
                   qvalue = 0, 
                   graphtype = "total", 
                   output = "percentage", 
@@ -1478,7 +1627,7 @@ Like before, using the `ss_diversity_plot` function, we can also subset the freq
 
   # Below 2,000 Hz
 
-plot_1 <- ss_diversity_plot(soundscape_obj = soundscape_list[["Andre"]], 
+plot_1 <- ss_diversity_plot(soundscape_obj = balbina[["Andre"]], 
                   qvalue = 0, 
                   graphtype = "total", 
                   output = "percentage", 
@@ -1492,7 +1641,7 @@ plot_1 <- ss_diversity_plot(soundscape_obj = soundscape_list[["Andre"]],
 
   # Between 2,000 - 8,000 Hz
 
-plot_2 <- ss_diversity_plot(soundscape_obj = soundscape_list[["Andre"]], 
+plot_2 <- ss_diversity_plot(soundscape_obj = balbina[["Andre"]], 
                   qvalue = 0, 
                   graphtype = "total", 
                   output = "percentage", 
@@ -1507,7 +1656,7 @@ plot_2 <- ss_diversity_plot(soundscape_obj = soundscape_list[["Andre"]],
 
 # Above 8,000 Hz
 
-plot_3 <- ss_diversity_plot(soundscape_obj = soundscape_list[["Andre"]], 
+plot_3 <- ss_diversity_plot(soundscape_obj = balbina[["Andre"]], 
                   qvalue = 0, 
                   graphtype = "total", 
                   output = "percentage", 
@@ -1538,7 +1687,7 @@ Clearly, this function is very useful for providing a visual representation of t
 
 ```{r, dev='svg'}
 
-ss_diversity_plot(soundscape_obj = soundscape_list[["Andre"]], 
+ss_diversity_plot(soundscape_obj = balbina[["Andre"]], 
                   qvalue = 0, 
                   graphtype = "frequency", 
                   output = "percentage", 
@@ -1555,7 +1704,7 @@ The *graphtype = "frequency"* option shows the variation in the soundscape richn
 
 ```{r,dev='svg'}
 
-ss_diversity_plot(soundscape_obj = soundscape_list[["Andre"]], 
+ss_diversity_plot(soundscape_obj = balbina[["Andre"]], 
                   qvalue = 0, 
                   graphtype = "frequency", 
                   output = "percentage", 
@@ -1577,7 +1726,7 @@ Next up, let's have a look at the *graphtype = "normfreq"* option.
 
 ```{r, dev='svg'}
 
-ss_diversity_plot(soundscape_obj = soundscape_list[["Andre"]], 
+ss_diversity_plot(soundscape_obj = balbina[["Andre"]], 
                   qvalue = 0, 
                   graphtype = "normfreq", 
                   output = "percentage", 
@@ -1597,7 +1746,7 @@ Finally, let's have a look at our final option: *graphtype = "linefreq"*.
 
 ```{r, fig.width=35, fig.height=7, dev='svg'}
 
-ss_diversity_plot(soundscape_obj = soundscape_list[["Andre"]], 
+ss_diversity_plot(soundscape_obj = balbina[["Andre"]], 
                   qvalue = 0, 
                   graphtype = "linefreq", 
                   output = "percentage", 
@@ -1645,8 +1794,8 @@ The remaining arguments are the same as `ss_heatmap`, except for the annotate ar
 
 ```{r, width = 30, height = 10, cache=TRUE, eval=FALSE}
 
-soundscapeR::ss_compare(soundscape_obj_A = soundscape_list[["Andre"]],
-                        soundscape_obj_B = soundscape_list[["Mascote_A1"]], 
+soundscapeR::ss_compare(soundscape_obj_A = balbina[["Andre"]],
+                        soundscape_obj_B = balbina[["Mascote_A1"]], 
                         maxfreq = 20000)
 
 ```
@@ -1673,7 +1822,7 @@ Let's have a look at the mandatory arguments:
 <b>Mandatory input parameters</b></p>
 <p style='margin-left:1em;'>
 
-- <span style="font-weight: bold;">soundscape_list:</span><br> A list of soundscape objects. Each object in the list should be produced using the \code{\link{ss_create}} function (or ss_index_merge, ss_binarize, and ss_aggregate in sequence).<br><br>
+- <span style="font-weight: bold;">balbina:</span><br> A list of soundscape objects. Each object in the list should be produced using the \code{\link{ss_create}} function (or ss_index_merge, ss_binarize, and ss_aggregate in sequence).<br><br>
 
 </p>
 </span>
@@ -1686,7 +1835,7 @@ In it's most basic form, the `ss_pcoa` function takes a single argument: a list 
 
 ```{r}
 
-ss_pcoa(soundscape_list = soundscape_list)
+ss_pcoa(soundscape_list =  balbina)
 
 ```
 
@@ -1700,7 +1849,7 @@ Now, let's have a look at the other plotting parameters:
 <b>Optional input parameters</b></p>
 <p style='margin-left:1em;'>
 
-- <span style="font-weight: bold;">grouping:</span><br> A numeric or character vector indicating potential grouping of the elements in the 'soundscape_list' object. Make sure that the grouping vector has the same length as the 'soundscape_list' argument.<br><br>
+- <span style="font-weight: bold;">grouping:</span><br> A numeric or character vector indicating potential grouping of the elements in the 'balbina' object. Make sure that the grouping vector has the same length as the 'balbina' argument.<br><br>
 
 - <span style="font-weight: bold;">screeplot:</span><br> A boolean operator indicating whether the function should produce a screeplot in addition to the PCoA plot. Options are: TRUE and FALSE.<br><br>
 
@@ -1713,18 +1862,18 @@ Now, let's have a look at the other plotting parameters:
 
 ```{r}
 
-ss_pcoa(soundscape_list = soundscape_list, 
+ss_pcoa(soundscape_list = balbina, 
         grouping = c("Aline", rep("Mascote", 4)))
 
 ```
 
-The *grouping* argument is used to indicate which soundscapes in the *soundscape_list* argument belong together, and colors them accordingly. This is already a little clearer than the previous plot. 
+The *grouping* argument is used to indicate which soundscapes in the *balbina* argument belong together, and colors them accordingly. This is already a little clearer than the previous plot. 
 
 **Next, let's take a look at the *screeplot* argument:**
 
 ```{r, fig.width=16, fig.height=8}
 
-ss_pcoa(soundscape_list = soundscape_list, 
+ss_pcoa(soundscape_list = balbina, 
         grouping = c("Aline", rep("Mascote", 4)), 
         screeplot = TRUE)
 
@@ -1757,7 +1906,7 @@ Now that we know the theory, let's take a look at how we can do this in practice
 <b>Function input parameters</b></p>
 <p style='margin-left:1em;'>
 
-- <span style="font-weight: bold;">soundscape_list:</span><br> A list of soundscape objects of equal dimensions, each soundscape object being produced by ss_create (or ss_index_merge, ss_binarize and ss_aggregate in sequence)<br><br>
+- <span style="font-weight: bold;">balbina:</span><br> A list of soundscape objects of equal dimensions, each soundscape object being produced by ss_create (or ss_index_merge, ss_binarize and ss_aggregate in sequence)<br><br>
 
 - <span style="font-weight: bold;">qvalue:</span><br> A positive integer or decimal number (>=0), most commonly between 0-3. This parameter modulates the sensitivity of diversity values to the relative abundance of Operational Sound Units (OSUs). A value of 0 corresponds to the richness, a value of 1 is the equivalent number of effective OSUs for the Shannon index, a value of 2 is the equivalent number of effective OSUs for the Simpson index.<br><br>
 
@@ -1771,7 +1920,7 @@ Now, we can use our island system to see how the overall system soundscape diver
 
 ```{r}
 
-ss_divpart(soundscape_list = soundscape_list,
+ss_divpart(soundscape_list = balbina,
            qvalue = 0)
 
 
@@ -1790,7 +1939,7 @@ But not all soundscapes in our study system are equal - some are more similar to
 <b>Function input parameters</b></p>
 <p style='margin-left:1em;'>
 
-- <span style="font-weight: bold;">hier_table:</span><br> A matrix indicating the relationship between the soundscapes in the soundscape_list. The first column lists the names of all the soundscapes in the soundscape_list, other columns can be used to group soundscapes into higher hierarchical levels. If no hierarchy table is supplied, the function defaults to a 2-level diversity partitioning.<br><br>
+- <span style="font-weight: bold;">hier_table:</span><br> A matrix indicating the relationship between the soundscapes in the balbina. The first column lists the names of all the soundscapes in the balbina, other columns can be used to group soundscapes into higher hierarchical levels. If no hierarchy table is supplied, the function defaults to a 2-level diversity partitioning.<br><br>
 
 </p>
 </span>
@@ -1806,7 +1955,7 @@ hierarchy_table <- as.matrix(
   data.frame(Sample = c("Andre", "Mascote_A1", "Mascote_A2", "Mascote_B1", "Mascote_B2"), 
              grouping_1 = c("Andre", "Mascote", "Mascote", "Mascote", "Mascote")))
 
-ss_divpart(soundscape_list = soundscape_list, 
+ss_divpart(soundscape_list = balbina, 
            qvalue = 0, 
            hier_table = hierarchy_table)
 
@@ -1847,13 +1996,13 @@ For all of the aforementioned similarity indices, the `ss_pairdis` function tran
 
 If you want to learn more about the computation of similarity metrics using the framework of Hill numbers, have a look at the [hilldiv GitHub tutorial here](https://github.com/anttonalberdi/CLIMBATS_school_2020/blob/master/diversity_hillnumbers/4-Diversity_partitioning_and_dissimilarity_measurement.md) and [this paper](https://onlinelibrary.wiley.com/doi/full/10.1111/1755-0998.13014?casa_token=HSzss2ta-x8AAAAA%3Agx1wipMPwbFvb8pc6dy7W7vZxxDMi63_2jIKHYUH_5qPC1xYqKNbrQq3leGv1XEqnsFUhqgAPB0t4ihV). 
 
-To use the `ss_pairdis` function, we need to supply the same parameters as the `ss_divpart` function: *soundscape_list*, *qvalue* and *hier_table* (optional). 
+To use the `ss_pairdis` function, we need to supply the same parameters as the `ss_divpart` function: *balbina*, *qvalue* and *hier_table* (optional). 
 
 **Let's have a look:**
 
 ```{r, cache=TRUE}
 
-ss_pairdis(soundscape_list = soundscape_list, 
+ss_pairdis(soundscape_list = balbina, 
            qvalue = 0)
 
 
