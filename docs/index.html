@@ -409,7 +409,7 @@ like, thus minimizing the chance of accidental errors.<br />
 <p><strong>Take a look at Figure 3 for an overview of the
 <code>soundscapeR</code> workflow:</strong></p>
 <div class="figure">
-<img src="images/Plot_1_soundscapeR_workflow.PNG" alt="Figure 3: A schematic overview of the `soundscapeR` workflow" width="100%" />
+<img src="images/Plot_1_soundscapeR_workflow.png" alt="Figure 3: A schematic overview of the `soundscapeR` workflow" width="100%" />
 <p class="caption">
 Figure 3: A schematic overview of the <code>soundscapeR</code> workflow
 </p>
@@ -558,7 +558,8 @@ missing:</strong></p>
 <span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>filelocs_missing <span class="ot">&lt;-</span> <span class="fu">ss_assess_files</span>(<span class="at">file_locs =</span> filelocs_missing, </span>
 <span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>                                    <span class="at">full_days =</span> <span class="cn">FALSE</span>)</span></code></pre></div>
-<pre><code>## Irregular timeinterval detected for:  Andrecharacter(0)</code></pre>
+<pre><code>## Irregular timeinterval detected for:  Andre 
+## Based on the expected sampling regime, there are missing files...</code></pre>
 <pre><code>## Error in ss_assess_files(file_locs = filelocs_missing, full_days = FALSE): Irregular timeintervals detected - check files</code></pre>
 <p>As you can see, the <code>ss_assess_files</code> function generates
 an error message if the files in fileloc deviate from the expected

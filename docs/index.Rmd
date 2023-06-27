@@ -127,7 +127,7 @@ To simplify the use of the `soundscapeR` package, we created an S4-object which 
 **Take a look at Figure 3 for an overview of the `soundscapeR` workflow:**
 
 ```{r figure 3, echo=FALSE, fig.cap="Figure 3: A schematic overview of the `soundscapeR` workflow", out.width = '100%'}
-knitr::include_graphics("images/Plot_1_soundscapeR_workflow.PNG")
+knitr::include_graphics("images/Plot_1_soundscapeR_workflow.png")
 ```
 
 
