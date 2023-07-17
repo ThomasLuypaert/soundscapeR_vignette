@@ -1863,7 +1863,7 @@ Now, let's have a look at the other plotting parameters:
 ```{r}
 
 ss_pcoa(soundscape_list = balbina, 
-        grouping = c("Aline", rep("Mascote", 4)))
+        grouping = c("Andre", rep("Mascote", 4)))
 
 ```
 
@@ -1874,7 +1874,7 @@ The *grouping* argument is used to indicate which soundscapes in the *balbina* a
 ```{r, fig.width=16, fig.height=8}
 
 ss_pcoa(soundscape_list = balbina, 
-        grouping = c("Aline", rep("Mascote", 4)), 
+        grouping = c("Andre", rep("Mascote", 4)), 
         screeplot = TRUE)
 
 ```
@@ -1929,7 +1929,7 @@ ss_divpart(soundscape_list = balbina,
 
 We can see that the system's alpha soundscape richness is 31.4%, the average richness of the local soundscape. However, overall, the consolidated soundscape richness of the system (gamma richness) is 57.2% - almost twice as high. A lower alpha richness at each location, but higher gamma richness when taking all locations together, suggests there might be some OSU turnover going on between our soundscapes - they are not identical. Indeed, this is confirmed by the soundscape turnover (beta), which is 1.82. In theory, this value can range from 1 (all soundscapes completely identical) to 5 (all soundscapes completely distinct). Our value here suggests that there is low to moderate turnover in the OSU composition between the soundscapes in our system. 
 
-But not all soundscapes in our study system are equal - some are more similar to others. For example, we have four soundscapes from Mascote island, but only one soundscape from Aline island. We can incorporate this 'grouping' or 'hierarchical structure' into our our diversity partitioning calculations. 
+But not all soundscapes in our study system are equal - some are more similar to others. For example, we have four soundscapes from Mascote island, but only one soundscape from Andre island. We can incorporate this 'grouping' or 'hierarchical structure' into our our diversity partitioning calculations. 
 
 **Let's have a look at the next argument of the `ss_divpart` function:**
 
